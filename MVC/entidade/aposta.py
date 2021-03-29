@@ -1,18 +1,17 @@
 from entidade.jogo import Jogo
 from datetime import date
+from entidade.abstract_aposta_sorteio import Abstract_aposta_sorteio
+from entidade.exception import QuantidadeNumerosIncorreta, IdadeInvalida, JaExiste, NaoExiste, ListaVazia
 
-class Aposta():
-    def __init__(self, codigo, dia: int, mes: int, ano: int, jogo: Jogo, numeros: list):
+class Aposta(Abstract_aposta_sorteio):
+    def __init__(self, codigo: int, data: date, jogo: Jogo, numeros: list):
+        super().__init__(data, jogo)
         self.__codigo = codigo
-        self.__dia = dia
-        self.__mes = mes
-        self.__ano = ano
-        self.__data = date(ano,mes,dia)
-        self.__jogo = jogo
-        if self.__jogo.min_numeros <=len(numeros)<= self.__jogo.max_numeros:
+        #e se a qnt de numeros esta dentro do limite e nao ha rep..
+        if jogo.min_numeros <=len(numeros)<= jogo.max_numeros and self.num_rep(numeros) is False: 
             self.__numeros = numeros
         else:
-            self.__numeros = None
+            raise QuantidadeNumerosIncorreta()
         self.__apostadores = []
 
     @property
@@ -20,44 +19,8 @@ class Aposta():
         return self.__codigo
 
     @codigo.setter
-    def codigo(self, codigo):
+    def codigo(self, codigo: int):
         self.__codigo = codigo
-
-    @property
-    def dia(self):
-        return self.__dia
-
-    @dia.setter
-    def dia(self, dia):
-        self.__dia = dia
-
-    @property
-    def mes(self):
-        return self.__mes
-
-    @mes.setter
-    def mes(self, mes):
-        self.__mes = mes
-
-    @property
-    def ano(self):
-        return self.__ano
-
-    @ano.setter
-    def ano(self, ano):
-        self.__ano = ano
-
-    @property
-    def data(self):
-        return self.__data
-
-    @property
-    def jogo(self):
-        return self.__jogo
-
-    @jogo.setter
-    def jogo(self, jogo):
-        self.__jogo = jogo
 
     @property
     def numeros(self):
@@ -65,38 +28,45 @@ class Aposta():
 
     @numeros.setter
     def numeros(self, numeros: list):
-        if self.__jogo.min_numeros <=len(self.__numeros)<= self.__jogo.max_numeros:
+        if self.__jogo.min_numeros <=len(numeros)<= self.__jogo.max_numeros and self.num_rep(numeros) is False: 
             self.__numeros = numeros
-
-    def num_rep(self):
-        rep = False
-        cont = 0
-        while rep is False and cont< len(self.__numeros):
-            if self.__numeros.count(self.__numeros[cont]) > 1:
-                rep = True
-            else:
-                cont += 1
-        return rep
+        else:
+            raise QuantidadeNumerosIncorreta()
 
     def add_apostador(self, apostador):
-        from apostador import Apostador
-
-        if isinstance(apostador, Apostador) and apostador not in self.__apostadores:
-            if self.num_rep() is False:
-                self.__apostadores.append(apostador)
-                if self not in apostador.apostas():
-                    apostador.add_aposta(self)
+        from entidade.apostador import Apostador
+        # se apostador do tipo Apostador
+        if isinstance(apostador, Apostador):
+            #se aposta nao possui apostador
+            if (apostador not in self.__apostadores):
+                #se apostado +18
+                if (apostador.idade >= 18):
+                    #adiciona o apostador
+                    self.__apostadores.append(apostador)
+                    #se o apostador nao possui a aposta
+                    if self not in apostador.apostas():
+                        #adiciona a aposta
+                        apostador.add_aposta(self)
+                else:
+                    raise IdadeInvalida()
             else:
-                print('Aposta com números repetidos')
-
+                raise JaExiste('apostador')
 
     def del__apostador(self, apostador):
-        from apostador import Apostador
-        if isinstance(apostador, Apostador) and apostador in self.__apostadores:
-            self.__apostadores.remove(apostador)
-            if self in apostador.apostas():
-                apostador.del_aposta(self)
+        from entidade.apostador import Apostador
+        # se apostador do tipo Apostador
+        if isinstance(apostador, Apostador):
+            #se a aposta possui o apostador
+            if apostador in self.__apostadores:
+                #remove o apostador
+                self.__apostadores.remove(apostador)
+                #se o apostador possui a aposta
+                if self in apostador.apostas():
+                    #remove a aposta
+                    apostador.del_aposta(self)
+            else:
+                raise NaoExiste('apostador')
 
     def apostadores(self):
         return self.__apostadores
-
+        

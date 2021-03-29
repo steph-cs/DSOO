@@ -1,23 +1,28 @@
 from entidade.aposta import Aposta
 from entidade.jogo import Jogo
 from entidade.sorteio import Sorteio
+from datetime import date, timedelta
+from entidade.exception import QuantidadeNumerosIncorreta, NaoExiste, JaExiste, ListaVazia
 
 class Loteria():
     def __init__(self):
         self.__apostas = []
         self.__sorteios = []
-        print('Loteria criada!')
 
     def add_aposta(self, aposta):
-        if isinstance(aposta, Aposta) and aposta not in self.__apostas and len(aposta.apostadores())>0:
-            self.__apostas.append(aposta)
-            print('Aposta adicionada!')
+        if isinstance(aposta, Aposta) and aposta not in self.__apostas:
+            if len(aposta.apostadores())>0:
+                self.__apostas.append(aposta)
+            else:
+                raise NaoExiste('apostadores')
         else:
-            print('Verifique a aposta!')
+            raise JaExiste('aposta')
 
     def del_aposta(self, aposta):
         if isinstance(aposta, Aposta) and aposta in self.__apostas:
             self.__apostas.remove(aposta)
+        else:
+            raise NaoExiste('aposta')
 
     def apostas(self):
         return self.__apostas
@@ -30,17 +35,17 @@ class Loteria():
                     apostas.append(aposta)
             return apostas
 
-    def apostas_por_data(self, dia, mes, ano):
+    def apostas_por_data(self, data):
         apostas = []
         for aposta in self.__apostas:
-            if (aposta.dia == dia) and (aposta.mes == mes) and (aposta.ano == ano):
+            if aposta.data == data:
                 apostas.append(aposta)
         return apostas
 
-    def apostas_por_jogo_data(self, jogo, dia, mes, ano):
+    def apostas_por_jogo_data(self, jogo, data):
         apostas_jogo_data = []
         apostas_jogo = self.apostas_por_jogo(jogo)
-        apostas_data = self.apostas_por_data(dia, mes, ano)
+        apostas_data = self.apostas_por_data(data)
         for ap_jogo in apostas_jogo:
             for ap_dat in apostas_data:
                 if ap_jogo == ap_dat:
@@ -58,12 +63,12 @@ class Loteria():
     def sorteios(self):
         return self.__sorteios
 
-    def apostas_ganhas(self):
+    def apostas_ganhas(self): 
         apostas = []
         for aposta in self.__apostas:
             cont = 0
             for sorteio in self.__sorteios:
-                if (aposta.jogo == sorteio.jogo) and (aposta.mes == sorteio.mes) and (sorteio.dia - 7 <=aposta.dia<=sorteio.dia):
+                if (aposta.jogo == sorteio.jogo) and (sorteio.data - timedelta(days=7)<=aposta.data<= sorteio.data):
                     for numero in sorteio.numeros:
                         if numero in aposta.numeros:
                             cont += 1
@@ -81,10 +86,10 @@ class Loteria():
                     apostas.append(ap_ganha)
         return apostas
 
-    def ganhadores_por_data_jogo(self, dia, mes, ano, jogo = None):
+    def ganhadores_por_data_jogo(self, data, jogo = None):
         apostas_ganhas = self.apostas_ganhas()
         apostas = []
-        apostas_data = self.apostas_por_data(dia,mes,ano)
+        apostas_data = self.apostas_por_data(data)
         if jogo is None:
             apostas_ganhas = self.apostas_ganhas()
             for ap_ganha in apostas_ganhas:
@@ -100,25 +105,32 @@ class Loteria():
         return apostas
 
     def ultimas_apostas_ganhas(self, qnt, jogo = None ):
-        if jogo is None:
-            apostas = self.apostas_ganhas()[-qnt:]
+        if len(self.__apostas)>=1:
+            if jogo is None:
+                apostas = self.apostas_ganhas()[-qnt:]
+            else:
+                apostas = self.ganhadores_por_jogo(jogo)[-qnt]
+            return apostas
         else:
-            apostas = self.ganhadores_por_jogo(jogo)[-qnt]
-        return apostas
+            raise ListaVazia('apostas ganhas')
 
     def sorteio_numeros_recorrentes(self, jogo):
+        # numeros que mais foram apostados dentre as apostas ganhas
         # qnt de numeros recorrentes de acordo com a qnt minima de numeros do jogo
         apostas = self.ganhadores_por_jogo(jogo)
-        qnt_num = jogo.min_numeros
-        numeros = {}
-        for aposta in apostas:
-            for numero in aposta.numeros:
-                if numero in numeros:
-                    numeros[numero] = (numeros[numero] + 1)
-                else: 
-                    numeros[numero] = 1
+        if apostas >= 1:
+            qnt_num = jogo.min_numeros
+            numeros = {}
+            for aposta in apostas:
+                for numero in aposta.numeros:
+                    if numero in numeros:
+                        numeros[numero] = (numeros[numero] + 1)
+                    else: 
+                        numeros[numero] = 1
 
-        return (sorted(numeros.items(), key= lambda x: x[1],reverse= True))[:qnt_num]
+            return (sorted(numeros.items(), key= lambda x: x[1],reverse = True))[:qnt_num]
+        else:
+            raise ListaVazia('apostas ganhas')
 
 
 
