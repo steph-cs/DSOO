@@ -1,9 +1,13 @@
+from entidade.exception import QuantidadeNumerosIncorreta
 
 class Jogo():
     def __init__(self, nome: str, max_numeros: int, min_numeros: int, premio: int):
         self.__nome = nome
-        self.__max_numeros = max_numeros
-        self.__min_numeros = min_numeros
+        if 0 < min_numeros <= max_numeros <= 15 :
+            self.__max_numeros = max_numeros
+            self.__min_numeros = min_numeros
+        else:
+            raise QuantidadeNumerosIncorreta()
         self.__premio = premio
 
     @property
@@ -20,7 +24,10 @@ class Jogo():
 
     @max_numeros.setter
     def max_numeros(self, max_numeros: int):
-        self.__max_numeros = max_numeros
+        if self.__min_numeros <= max_numeros <= 15:
+            self.__max_numeros = max_numeros
+        else:
+            raise QuantidadeNumerosIncorreta()
 
     @property
     def min_numeros(self):
@@ -28,7 +35,10 @@ class Jogo():
 
     @min_numeros.setter
     def min_numeros(self, min_numeros: int):
-        self.__min_numeros = min_numeros
+        if 0 < min_numeros <= self.__max_numeros:
+            self.__min_numeros = min_numeros
+        else:
+            raise QuantidadeNumerosIncorreta()
 
     @property
     def premio(self):
