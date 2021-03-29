@@ -4,6 +4,7 @@ from controle.controlador_loteria import ControladorLoteria
 from controle.controlador_apostador import ControladorApostador
 from controle.controlador_aposta import ControladorAposta
 from controle.controlador_jogo import ControladorJogo
+from controle.controlador_sorteio import ControladorSorteio
 
 
 class ControladorSistema:
@@ -13,6 +14,7 @@ class ControladorSistema:
         self.__controlador_apostador = ControladorApostador(self)
         self.__controlador_aposta = ControladorAposta(self)
         self.__controlador_jogo = ControladorJogo(self)
+        self.__controlador_sorteio = ControladorSorteio(self)
 
     def inicia(self):
         self.abre_tela_inicial()
@@ -29,6 +31,8 @@ class ControladorSistema:
     def controlador_loteria(self):
         return self.__controlador_loteria
 
+    def controlador_sorteio(self):
+        return self.__controlador_sorteio
 
     def abre_tela_inicial(self):
         switcher = {
@@ -36,7 +40,8 @@ class ControladorSistema:
             1 : self.controlador_loteria(),
             2 : self.controlador_jogo(),
             3 : self.controlador_apostador(),
-            4 : self.controlador_aposta()
+            4 : self.controlador_aposta(),
+            5 : self.controlador_sorteio()
         }
         op = True
         while op:
