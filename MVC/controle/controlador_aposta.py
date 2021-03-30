@@ -183,18 +183,11 @@ class ControladorAposta(ControladorAbstrato):
         if aposta is not None:
             try:
                 numeros = self.__tela_aposta.leiaints()
-                limite = aposta.jogo.min_numeros <= len(numeros) <= aposta.jogo.max_numeros
-                if limite and self.num_rep(numeros) is False:
-                    #realiza a alteracao
-                    aposta.numeros = numeros
-                    self.__tela_aposta.msg('Numeros alterados')
-
-                else:
-                    raise  QuantidadeNumerosIncorreta()
+                aposta.numeros = numeros
+                self.__tela_aposta.msg('Numeros alterados')
             except QuantidadeNumerosIncorreta as qnt_incorreta:
                 self.__tela_aposta.msg(qnt_incorreta)
 
-    
     #acoes apostador
     def inclui_apostador(self):
         #inclui apostador
