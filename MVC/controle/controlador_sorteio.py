@@ -48,25 +48,6 @@ class ControladorSorteio():
         #retorna o sorteio se encontrado ou None
         return sorteio
     
-    def data_sorteio(self):
-        #pega a data ...
-        data = self.__tela_sorteio.pega_data()
-        #se for domingo retorna a data..
-        if data.weekday() == 6:
-            return data
-        else:
-            #se nao, mostra a data do dom anterior e do prox
-            dom_anterior = data
-            prox_dom = data
-            while prox_dom.weekday() != 6:
-                prox_dom = prox_dom + timedelta(days=1)
-            while dom_anterior.weekday() != 6:
-                dom_anterior = dom_anterior - timedelta(days=1)
-            self.__tela_sorteio.msg('Sorteios ocorrem somente aos domingos!')
-
-            print()
-            print('Dom anterior: ', dom_anterior.strftime("%d/%m/%y"))
-            print('Prox dom: ', prox_dom.strftime("%d/%m/%y")) 
 
     def inclui_sorteio(self):
         #inclui sorteio
