@@ -1,5 +1,6 @@
 from entidade.sorteio import Sorteio
 from limite.tela_sorteio import TelaSorteio
+from datetime import date, timedelta
 from entidade.exception import JaExiste, NaoExiste, ListaVazia, QuantidadeNumerosIncorreta
 
 class ControladorSorteio():
@@ -31,7 +32,7 @@ class ControladorSorteio():
                 funcao_escolhida()
 
     def sorteios(self):
-        return self.__sorteios
+        return sorted(self.__sorteios, key= lambda x : x.data)
 
     def encontra_sorteio(self, jogo, data):
         #encontra o sorteio 
@@ -39,60 +40,64 @@ class ControladorSorteio():
         existe = False 
         i = 0
         while existe is False and i< len(self.__sorteios):
-            if (self.__sorteios[i].data == data) and (self.__sorteios[i].jogo.nome == jogo):
+            if (self.__sorteios[i].data == data) and (self.__sorteios[i].jogo.nome == jogo.nome):
                 sorteio = self.__sorteios[i]
                 existe = True
             else:
                 i+=1
+        #retorna o sorteio se encontrado ou None
         return sorteio
     
-    def encontra_sorteio_existente(self, msg_jogo: str, msg_data: str):
-        #usada qnd é preciso que o sorteio exista p realizar uma acao
-        try:
-            #pega e verifica a existencia do sorteio
-            sorteio = self.encontra_sorteio(msg_jogo , msg_data)
-            if sorteio is None:
-                raise NaoExiste('Sorteio')
-            return sorteio
-        except NaoExiste as nao_existe:
-            self.__tela_sorteio.msg(nao_existe)
-        # retorna o sorteio se encontrado ou None
+    def data_sorteio(self):
+        #pega a data ...
+        data = self.__tela_sorteio.pega_data()
+        #se for domingo retorna a data..
+        if data.weekday() == 6:
+            return data
+        else:
+            #se nao, mostra a data do dom anterior e do prox
+            dom_anterior = data
+            prox_dom = data
+            while prox_dom.weekday() != 6:
+                prox_dom = prox_dom + timedelta(days=1)
+            while dom_anterior.weekday() != 6:
+                dom_anterior = dom_anterior - timedelta(days=1)
+            self.__tela_sorteio.msg('Sorteios ocorrem somente aos domingos!')
 
-    def encontra_sorteio_nao_existente(self, msg_jogo: str, msg_data: str):
-        #usada qnd é preciso que o sorteio nao exista p realizar uma acao
-        try:
-            #pega e verifica a existencia do sorteio
-            sorteio = self.encontra_sorteio(msg_jogo, msg_data)
-            if sorteio['sorteio'] is not None:
-                raise JaExiste('Sorteio')
-            return sorteio
-        except JaExiste as ja_existe:
-            self.__tela_sorteio.msg(ja_existe)
-        # retorna os dados do sorteio se nenhum igual encontrado ou None
+            print()
+            print('Dom anterior: ', dom_anterior.strftime("%d/%m/%y"))
+            print('Prox dom: ', prox_dom.strftime("%d/%m/%y")) 
 
     def inclui_sorteio(self):
         #inclui sorteio
         jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
-            try:
-                data = self.__tela_sorteio.pega_data()
-                #verifica(jogo,data) --> n deve exestir
-                sorteio = self.encontra_sorteio(jogo, data)
-                if sorteio is None:
-                    numeros = self.__tela_sorteio.leiaints()
-                    self.__sorteios.append(Sorteio(data, jogo, numeros))
-                    self.__tela_sorteio.msg('Sorteio adicionado!')
-                else:
-                    raise JaExiste('sorteio')
-            except JaExiste as ja_existe:
-                self.__tela_sorteio.msg(ja_existe)        
+            data = self.__tela_sorteio.data_sorteio()
+            if data is not None:
+                try:
+                    #verifica(jogo,data) --> n deve exestir
+                    sorteio = self.encontra_sorteio(jogo, data)
+                    if sorteio is None:
+                        lido = True
+                        while lido:
+                            numeros = self.__tela_sorteio.le_ints()
+                            self.__sorteios.append(Sorteio(data, jogo, numeros))
+                            self.__tela_sorteio.msg('Sorteio adicionado!')
+                            lido = False
+                    else:
+                        raise JaExiste('sorteio')
+                except JaExiste as ja_existe:
+                    self.__tela_sorteio.msg(ja_existe)
+                except QuantidadeNumerosIncorreta as qnt_incorreta:
+                    self.__tela_sorteio.msg('Min do jogo: {}'.format(jogo.min_numeros))
+                    self.__tela_sorteio.msg(qnt_incorreta)
 
     def exclui_sorteio(self):
         #exclui sorteio
         jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
             try:
-                data = self.__tela_sorteio.pega_data()
+                data = self.__tela_sorteio.data_sorteio()
                 #verifica(jogo,data) --> deve exestir
                 sorteio = self.encontra_sorteio(jogo, data)
                 if sorteio is not None:
@@ -108,7 +113,7 @@ class ControladorSorteio():
         try:
             if len(self.__sorteios) >= 1:
                 self.__tela_sorteio.msg('Sorteios')
-                for i in self.__sorteios:
+                for i in self.sorteios():
                     self.__tela_sorteio.lista_sorteio(i.data, i.jogo.nome,i.jogo.premio, i.numeros)
             else:
                 raise ListaVazia('sorteios')
@@ -138,13 +143,13 @@ class ControladorSorteio():
         jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
             try:
-                data = self.__tela_sorteio.pega_data()
+                data = self.__tela_sorteio.data_sorteio()
                 #verifica(jogo,data) --> deve exestir
                 sorteio = self.encontra_sorteio(jogo, data)
                 if sorteio is not None:
                     self.__tela_sorteio.msg('Nova data')
                     #nova data
-                    nova_data = self.__tela_sorteio.pega_data()
+                    nova_data = self.__tela_sorteio.data_sorteio()
                     #verifica(jogo, nova data) --> n deve existir
                     if self.encontra_sorteio(jogo, nova_data) is None:
                         sorteio.data = nova_data
@@ -164,7 +169,7 @@ class ControladorSorteio():
         jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
             try:
-                data = self.__tela_sorteio.pega_data()
+                data = self.__tela_sorteio.data_sorteio()
                 #verifica(jogo,data) --> deve exestir
                 sorteio = self.encontra_sorteio(jogo, data)
                 if sorteio is not None:
@@ -191,11 +196,11 @@ class ControladorSorteio():
         jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
             try:
-                data = self.__tela_sorteio.pega_data()
+                data = self.__tela_sorteio.data_sorteio()
                 #verifica(jogo,data) --> deve exestir
                 sorteio = self.encontra_sorteio(jogo, data)
                 if sorteio is not None:
-                    numeros = self.__tela_sorteio.leiaints()
+                    numeros = self.__tela_sorteio.le_ints()
                     sorteio.numeros = numeros
                     self.__tela_sorteio.msg('Numeros alterados!')
                 else:

@@ -31,7 +31,7 @@ class ControladorJogo():
                 funcao_escolhida()
 
     def jogos(self):
-        return self.__jogos
+        return sorted(self.__jogos , key= lambda x : x.nome)
 
     def encontra_jogo(self, msg: str):
         nome = self.__tela_jogo.pega_dado_str(msg)
@@ -71,12 +71,13 @@ class ControladorJogo():
             self.__tela_jogo.msg(ja_existe)
         # retorna o nome do jogo se nenhum igual encontrado ou None
 
+
     def inclui_jogo(self):
         #pega e verifca a nao existencia do jogo..
         jogo = self.encontra_jogo_nao_existente('Nome do jogo: ')
         if jogo is not None:
             lido = True
-            premio = self.__tela_jogo.pega_dado_int('Premio: ')
+            premio = self.__tela_jogo.pega_premio()
             while lido:
                 try:        
                     #se nao existente pega o resto dos dados
@@ -103,13 +104,14 @@ class ControladorJogo():
         try:
             if len(self.__jogos) >= 1:
                 self.__tela_jogo.msg('Jogos')
-                for i in self.__jogos:
+                for i in self.jogos():
                     self.__tela_jogo.lista_jogo(i.nome, i.max_numeros, i.min_numeros, i.premio)
             else:
                 raise ListaVazia('jogos')
         except ListaVazia as vazia:
             self.__tela_jogo.msg(vazia)
 
+    #alteracao
     def abre_tela_altera_jogo(self):
         #opcoes de alteracao do apostador
         switcher = {
@@ -173,6 +175,6 @@ class ControladorJogo():
         jogo = self.encontra_jogo_existente('Nome do jogo para alterar: ')
         if jogo is not None:
             #pede o novo valor do premio..
-            premio = self.__tela_jogo.pega_dado_int('Valor do premio: ')
+            premio = self.__tela_jogo.pega_premio()
             #realiza a alteracao
             jogo.premio = premio

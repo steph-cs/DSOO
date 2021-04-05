@@ -1,10 +1,9 @@
 from limite.tela_aposta import TelaAposta
 from entidade.aposta import Aposta
-from controle.controlador_abstrato import ControladorAbstrato
-from entidade.exception import JaExiste, NaoExiste, QuantidadeNumerosIncorreta, ListaVazia, IdadeInvalida
+from entidade.exception import JaExiste, NaoExiste, QuantidadeNumerosIncorreta, ListaVazia, IdadeInvalida, NumerosIncorretos
 
 
-class ControladorAposta(ControladorAbstrato):
+class ControladorAposta:
     def __init__(self,controlador_sistema):
         self.__controlador_sistema = controlador_sistema
         self.__tela_aposta = TelaAposta(self)
@@ -35,6 +34,10 @@ class ControladorAposta(ControladorAbstrato):
             else:
                 funcao_escolhida()
 
+    def apostas(self):
+        #retorna a lista de apostas ordenada por data
+        return sorted(self.__apostas, key= lambda x : x.data )
+
     def encontra_aposta(self, msg: str):
         #encontra aposta pelo codigo
         codigo = self.__tela_aposta.pega_dado_int(msg)
@@ -49,7 +52,7 @@ class ControladorAposta(ControladorAbstrato):
             else:
                 i+=1
         return {'aposta': aposta, 'codigo': codigo}
-
+    
     def encontra_aposta_existente(self, msg: str):
         #usada qnd é preciso que a aposta exista p realizar uma acao
         try:
@@ -87,14 +90,19 @@ class ControladorAposta(ControladorAbstrato):
                 while lido:
                     try:
                         #define a lista de numeros 
-                        numeros = self.__tela_aposta.leiaints()
-                        #define o codigo
+                        numeros = sorted(self.__tela_aposta.le_ints())
+                        #tenta criar a aposta
                         aposta = Aposta(codigo, data, jogo, numeros)
+                        #se criada adicionada na lista de apostas
                         self.__apostas.append(aposta)
                         self.__tela_aposta.msg('Aposta Adicionada')
                         lido = False
                     except QuantidadeNumerosIncorreta as qnt_incorreta:
+                        #se qnt de num incorreta mostra o max e min permitido de acordo c o jogo escolhido
+                        self.__tela_aposta.msg('Max: {}  Min: {}'.format(jogo.max_numeros, jogo.min_numeros))
                         self.__tela_aposta.msg(qnt_incorreta)
+                    except NumerosIncorretos as num_incorretos:
+                        self.__tela_aposta.msg(num_incorretos)
 
     def exclui_aposta(self):
         #exclui aposta
@@ -113,7 +121,7 @@ class ControladorAposta(ControladorAbstrato):
             #se ha apostas para listar
             if len(self.__apostas) >= 1:
                 self.__tela_aposta.msg('Apostas')
-                for i in self.__apostas:
+                for i in self.apostas():
                     self.__tela_aposta.lista_apostas(i.codigo ,i.data, i.jogo.nome, i.numeros)
             else:
                 raise ListaVazia('apostas')
@@ -144,6 +152,7 @@ class ControladorAposta(ControladorAbstrato):
         #altera codigo da aposta
         #pede o codigo da aposta para alterar..
         aposta = self.encontra_aposta_existente('Codigo da aposta para alterar: ')
+        #se a aposta existe
         if aposta is not None:
             #pede o novo codigo
             codigo = self.encontra_aposta_nao_existente('Novo codigo da aposta: ')
@@ -168,7 +177,7 @@ class ControladorAposta(ControladorAbstrato):
         #pede o codigo da aposta para alterar..
         aposta = self.encontra_aposta_existente('Codigo da aposta para alterar: ')
         if aposta is not None:
-            jogo = self.__controlador_sistema.controlador_jogo().encontra_aposta_existente('Novo jogo: ')
+            jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Novo jogo: ')
             if jogo is not None:
                 #realiza a alteracao
                 try:
@@ -182,11 +191,14 @@ class ControladorAposta(ControladorAbstrato):
         aposta = self.encontra_aposta_existente('Codigo da aposta para alterar: ')
         if aposta is not None:
             try:
-                numeros = self.__tela_aposta.leiaints()
+                numeros = sorted(self.__tela_aposta.le_ints())
                 aposta.numeros = numeros
                 self.__tela_aposta.msg('Numeros alterados')
             except QuantidadeNumerosIncorreta as qnt_incorreta:
                 self.__tela_aposta.msg(qnt_incorreta)
+            except NumerosIncorretos as num_incorretos:
+                self.__tela_aposta.msg(num_incorretos)
+
 
     #acoes apostador
     def inclui_apostador(self):
@@ -230,7 +242,7 @@ class ControladorAposta(ControladorAbstrato):
                 if len(aposta.apostadores())>=1:
                     self.__tela_aposta.msg('Apostadores')
                     for i in aposta.apostadores():
-                        self.__tela_aposta.lista_apostadores(i.nome, i.cpf, i.idade)
+                        self.__tela_aposta.lista_apostadores(i.nome, i.cpf, i.idade, i.endereco().estado, i.endereco().cidade)
                 else:
                     raise ListaVazia('apostadores')
             except ListaVazia as vazia:

@@ -32,15 +32,26 @@ class ControladorLoteria():
             else:
                 funcao_escolhida()
 
+#acoes aposta
     def inclui_aposta(self):
         aposta = self.__controlador_sistema.controlador_aposta().encontra_aposta_existente('Codigo da aposta: ')
-        if aposta is not None and aposta not in self.__loteria.apostas():
-            self.__loteria.add_aposta(aposta)
+        try:
+            if aposta is not None :
+                self.__loteria.add_aposta(aposta)
+                self.__tela_loteria.msg('Aposta Adicionada!')
+        except NaoExiste as n_existe:
+            self.__tela_loteria.msg(n_existe)
+        except JaExiste as existe:
+            self.__tela_loteria.msg(existe)
 
     def exclui_aposta(self):
         aposta = self.__controlador_sistema.controlador_aposta().encontra_aposta_existente('Codigo da aposta: ')
-        if aposta is not None and aposta in self.__loteria.apostas():
-            self.__loteria.del_aposta(aposta)
+        if aposta is not None and aposta:
+            try:
+                self.__loteria.del_aposta(aposta)
+                self.__tela_loteria.msg('Aposta Deletada!')
+            except NaoExiste as n_existe:
+                self.__tela_loteria.msg(n_existe)
 
     def abre_tela_consulta_apostas(self):
         #opcoes consulta apostas
@@ -64,7 +75,7 @@ class ControladorLoteria():
         try:
             if len(self.__loteria.apostas())>=1:
                 for i in self.__loteria.apostas():
-                    self.__tela_loteria.lista_apostas(i.data,i.jogo.nome,i.numeros)
+                    self.__tela_loteria.lista_apostas(i.codigo ,i.data,i.jogo.nome,i.numeros)
             else:
                 raise ListaVazia('apostas')
         except ListaVazia as vazia:
@@ -73,11 +84,11 @@ class ControladorLoteria():
     def apostas_por_jogo(self):
         try:
             if len(self.__loteria.apostas())>=1:
-                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo()
+                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
                 if jogo is not None:
                     apostas = self.__loteria.apostas_por_jogo(jogo)
                     for i in apostas:
-                        self.__tela_loteria.lista_apostas(i.data,i.jogo.nome,i.numeros)
+                        self.__tela_loteria.lista_apostas(i.codigo, i.data,i.jogo.nome,i.numeros)
             else:
                 raise ListaVazia('apostas')
         except ListaVazia as vazia:
@@ -86,10 +97,10 @@ class ControladorLoteria():
     def apostas_por_data(self):
         try:
             if len(self.__loteria.apostas())>=1:
-                data = self.__tela_loteria.pega_data()
-                apostas = self.__loteria.apostas_por_data(data)
+                datas = self.__tela_loteria.pega_datas()
+                apostas = self.__loteria.apostas_por_data(datas['data_min'], datas['data_max'])
                 for i in apostas:
-                    self.__tela_loteria.lista_apostas(i.data,i.jogo.nome,i.numeros)
+                    self.__tela_loteria.lista_apostas(i.codigo, i.data,i.jogo.nome,i.numeros)
             else:
                 raise ListaVazia('apostas')
         except ListaVazia as vazia:
@@ -98,36 +109,41 @@ class ControladorLoteria():
     def apostas_por_jogo_data(self):
         try:
             if len(self.__loteria.apostas())>=1:
-                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo('Nome do jogo: ')
-                data = self.__tela_loteria.pega_data()
-                apostas = self.__loteria.apostas_por_jogo_data(jogo, data)
+                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
+                datas = self.__tela_loteria.pega_datas()
+                apostas = self.__loteria.apostas_por_jogo_data(jogo, datas['data_min'], datas['data_max'])
                 for i in apostas:
-                    self.__tela_loteria.lista_apostas(i.data,i.jogo.nome,i.numeros)
+                    self.__tela_loteria.lista_apostas(i.codigo, i.data,i.jogo.nome,i.numeros)
             else:
                 raise ListaVazia('apostas')
         except ListaVazia as vazia:
             self.__tela_loteria.msg(vazia)
 
+#acoes sorteio
     def inclui_sorteio(self):
+        controlador_sorteio = self.__controlador_sistema.controlador_sorteio()
         jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
             try:
-                data = self.__tela_loteria.pega_data()
-                sorteio = self.__controlador_sistema.controlador_sorteio().encontra_sorteio(jogo, data)
-                if sorteio is not None:
+                data = controlador_sorteio.data_sorteio()
+                sorteio = controlador_sorteio.encontra_sorteio(jogo, data)
+                if sorteio is not None :
                     self.__loteria.add_sorteio(sorteio)
                     self.__tela_loteria.msg('Sorteio Adicionado!')
                 else:
                     raise NaoExiste('sorteio')
             except NaoExiste as n_existe:
                 self.__tela_loteria.msg(n_existe)
+            except JaExiste as existe:
+                self.__tela_loteria.msg(existe)
 
     def exclui_sorteio(self):
+        controlador_sorteio = self.__controlador_sistema.controlador_sorteio()
         jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
             try:
-                data = self.__tela_loteria.pega_data()
-                sorteio = self.__controlador_sistema.controlador_sorteio().encontra_sorteio()
+                data = controlador_sorteio.data_sorteio()
+                sorteio =  controlador_sorteio.encontra_sorteio(jogo, data)
                 if sorteio is not None:
                     self.__loteria.del_sorteio(sorteio)
                     self.__tela_loteria.msg('Sorteio Deletado!')
@@ -172,8 +188,9 @@ class ControladorLoteria():
         try:
             if len(self.__loteria.apostas())>=1:
                 apostas= self.__loteria.apostas_ganhas()
+                self.__tela_loteria.msg('{} apostas ganhas'.format(len(apostas)))
                 for i in apostas:
-                    self.__tela_loteria.lista_apostas(i.data,i.jogo.nome,i.numeros)
+                    self.__tela_loteria.lista_apostas(i.codigo, i.data,i.jogo.nome,i.numeros)
             else:
                 raise ListaVazia('apostas ganhas')
         except ListaVazia as vazia:
@@ -184,16 +201,19 @@ class ControladorLoteria():
         try:
             if len(self.__loteria.apostas())>=1:
                 # input define jogo e verifica a existencia
-                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo()
+                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
                 if  jogo is not None:
                     # pega apostas ganhas de acordo com o jogo
                     apostas= self.__loteria.ganhadores_por_jogo(jogo)
                     if len(apostas)>=1:
-                        self.__tela_loteria.msg(jogo.nome)
+                        self.__tela_loteria.msg('{} - {} apostas ganhas'.format(jogo.nome, len(apostas)))
+                        qnt_ganhadores = 0
                         for aposta in apostas:
+                            qnt_ganhadores += len(aposta.apostadores())
                             self.__tela_loteria.msg(aposta.numeros)
                             for apostador in aposta.apostadores():
-                                self.__tela_loteria.lista_ganhadores(apostador.nome,apostador.cpf, apostador.idade, aposta.data, jogo.premio)
+                                self.__tela_loteria.lista_ganhadores(apostador.nome,apostador.cpf, apostador.idade, aposta.data, jogo.premio, apostador.endereco().estado, apostador.endereco().cidade)
+                        self.__tela_loteria.msg('{} ganhadores'.format(qnt_ganhadores))
                     else:
                         raise ListaVazia('ganhadores por jogo')
             else:
@@ -204,14 +224,17 @@ class ControladorLoteria():
     def ganhadores_por_data(self):
         try:
             if len(self.__loteria.apostas())>=1:
-                data = self.__tela_loteria.pega_data()
-                apostas = self.__loteria.ganhadores_por_data_jogo(data)
+                datas = self.__tela_loteria.pega_datas()
+                apostas = self.__loteria.ganhadores_por_data_jogo(datas['data_min'], datas['data_max'])
                 if len(apostas)>=1:
-                    self.__tela_loteria.msg(data.strftime("%d/%m/%y"))
+                    self.__tela_loteria.msg('Entre - {} - {}    {} apostas ganhas'.format(datas['data_min'].strftime("%d/%m/%y"), datas['data_max'].strftime("%d/%m/%y"), len(apostas)))
+                    qnt_ganhadores = 0
                     for aposta in apostas:
+                        qnt_ganhadores += len(aposta.apostadores())
                         self.__tela_loteria.msg(aposta.numeros)
                         for apostador in aposta.apostadores():
-                            self.__tela_loteria.lista_ganhadores(apostador.nome,apostador.cpf, apostador.idade, aposta.data, aposta.jogo.premio)  
+                            self.__tela_loteria.lista_ganhadores(apostador.nome,apostador.cpf, apostador.idade, aposta.data, aposta.jogo.premio, apostador.endereco().estado, apostador.endereco().cidade)  
+                    self.__tela_loteria.msg('{} ganhadores'.format(qnt_ganhadores))
                 else:
                     raise ListaVazia('ganhadores por data')                              
             else:
@@ -222,15 +245,18 @@ class ControladorLoteria():
     def ganhadores_por_jogo_data(self):
         try:
             if len(self.__loteria.apostas())>=1:
-                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo()
-                data = self.__tela_loteria.pega_data()
-                apostas = self.__loteria.ganhadores_por_data_jogo(data)
+                jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
+                datas = self.__tela_loteria.pega_datas()
+                apostas = self.__loteria.ganhadores_por_data_jogo(datas['data_min'], datas['data_max'])
                 if len(apostas)>=1:
-                    self.__tela_loteria.msg(jogo.nome)
+                    self.__tela_loteria.msg('{} - {} apostas ganhas'.format(jogo.nome, len(apostas)))
+                    qnt_ganhadores = 0
                     for aposta in apostas:
+                        qnt_ganhadores += len(aposta.apostadores())
                         self.__tela_loteria.msg(aposta.numeros)
                         for apostador in aposta.apostadores():
-                            self.__tela_loteria.lista_ganhadores(apostador.nome,apostador.cpf,aposta.dia, aposta.mes, aposta.ano) 
+                            self.__tela_loteria.lista_ganhadores(apostador.nome,apostador.cpf, apostador.idade, aposta.data, aposta.premio, apostador.endereco().estado, apostador.endereco().cidade) 
+                    self.__tela_loteria.msg('{} ganhadores'.format(qnt_ganhadores))
                 else:
                     raise ListaVazia('ganhadores por data')                              
             else:
@@ -239,28 +265,28 @@ class ControladorLoteria():
             self.__tela_loteria.msg(vazia)
 
     def ultimas_apostas_ganhas(self):
-        qnt = self.__tela_loteria.leiaint('Quantidade de apostas: ')
+        qnt = self.__tela_loteria.le_int('Quantidade de apostas: ')
         try:
             apostas = self.__loteria.ultimas_apostas_ganhas(qnt)
             for i in apostas:
-                self.__tela_loteria.lista_apostas(i.data,i.jogo.nome,i.numeros)
+                self.__tela_loteria.lista_apostas(i.codigo, i.data,i.jogo.nome,i.numeros)
         except ListaVazia as vazia:
             self.__tela_loteria.msg(vazia)
 
     def ultimas_apostas_ganhas_por_jogo(self):
-        qnt = self.__tela_loteria.leiaint('Quantidade de apostas: ')
-        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo()
+        qnt = self.__tela_loteria.le_int('Quantidade de apostas: ')
+        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
         if jogo is not None:
             try:
                 apostas = self.__loteria.ultimas_apostas_ganhas(qnt)
                 for i in apostas:    
-                    self.__tela_loteria.lista_apostas(i.data,i.jogo.nome,i.numeros) 
+                    self.__tela_loteria.lista_apostas(i.codigo, i.data,i.jogo.nome,i.numeros) 
             except ListaVazia as vazia:
                 self.__tela_loteria.msg(vazia)
 
     def numeros_recorrentes(self):
         try:
-            jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo()
+            jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
             if jogo is not None:
                 numeros = self.__loteria.sorteio_numeros_recorrentes(jogo)
                 for i in numeros:
