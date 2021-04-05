@@ -14,9 +14,10 @@ class TelaApostador(TelaAbstrata):
         print("5 - Listar apostas")
         print("6 - Incluir aposta")
         print("7 - Excluir aposta")
+        print("8 - Alterar endereco")
         print("0 - Voltar")
         
-        opcao = self.le_opcoes("Escolha a opcao: ", [0, 1, 2, 3, 4, 5, 6, 7])
+        opcao = self.le_opcoes("Escolha a opcao: ", [0, 1, 2, 3, 4, 5, 6, 7, 8])
         return opcao
 
     def opcoes_alterar(self):

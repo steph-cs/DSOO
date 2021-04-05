@@ -1,4 +1,5 @@
 from limite.tela_abstrata import TelaAbstrata
+from datetime import date
 
 class TelaLoteria(TelaAbstrata):
     def __init__(self, controlador):
@@ -46,10 +47,10 @@ class TelaLoteria(TelaAbstrata):
         opcao = self.le_opcoes("Escolha a opcao: ", [0,1,2,3,4,5, 6, 7, 8])
         return opcao 
 
-    def lista_ganhadores(self, nome, cpf, idade, data, premio):
-        self.lista_apostadores(nome, cpf, idade)
-        print('Data da aposta: {}     Premio: R${},00'.format(data, premio))
+    def lista_ganhadores(self, nome: str, cpf: str, idade: int, data: date, premio: float, estado: str, cidade: str):
+        self.lista_apostadores(nome, cpf, idade, estado, cidade)
+        print('Data da aposta: {}     Premio: R${:.2f}'.format(data.strftime("%d/%m/%y"), premio))
     
-    def numeros_recorrentes(self, num, qnt_vezes):
+    def numeros_recorrentes(self, num: int, qnt_vezes: int):
         print('Numero: {}    {} vezes'.format(num, qnt_vezes))
     

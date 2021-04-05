@@ -28,10 +28,10 @@ class TelaJogo(TelaAbstrata):
         opcao = self.le_opcoes("Escolha a opcao: ", [0,1,2,3,4])
         return opcao
 
-    def lista_jogo(self, nome , max_numeros, min_numeros, premio):
+    def lista_jogo(self, nome: str , max_numeros: int, min_numeros: int, premio: float):
         #imprime dados de cada jogo cadastrado
-        print('__________________________________')
-        print("Nome: {}     Valor premio: R${},00".format(nome, premio))
+        print('..........................................')
+        print("Nome: {}     Valor premio: R${:.2f}".format(nome, premio))
         print("Max: {} numeros ; Min: {} numeros".format(max_numeros,min_numeros))
         
  
