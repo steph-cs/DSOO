@@ -1,5 +1,6 @@
 from limite.tela_apostador import TelaApostador
 from entidade.apostador import Apostador
+from entidade.endereco import Endereco
 from entidade.exception import JaExiste, NaoExiste, QuantidadeNumerosIncorreta, ListaVazia, IdadeInvalida
 
 class ControladorApostador:
@@ -9,7 +10,7 @@ class ControladorApostador:
         self.__apostadores = []
 
     def apostadores(self):
-        return self.__apostadores
+        return sorted(self.__apostadores, key= lambda x : x.idade)
 
     def inicia(self):
         #abre tela inicial
@@ -25,7 +26,8 @@ class ControladorApostador:
             4 : self.lista_apostador,
             5 : self.lista_apostas,
             6 : self.inclui_aposta,
-            7 : self.exclui_aposta
+            7 : self.exclui_aposta,
+            8 : self.altera_endereco
         }
         op = True
         while op:
@@ -36,37 +38,9 @@ class ControladorApostador:
             else:
                 funcao_escolhida()
 
-    def inclui_apostador(self):
-        #inclui apostador
-        #pega o cpf e verifca a nao existencia do apostador..
-        cpf = self.encontra_apostador_nao_existente('Cpf: ')
-        if cpf is not None:
-            #pega o nome..
-            nome = self.__tela_apostador.pega_dado_str('Nome: ')
-            #se nao existente pega o resto dos dados
-            lido = True
-            while lido:
-                try:
-                    ano_nasc = self.__tela_apostador.pega_dado_int('Ano de nascimento: ')
-                    #cria e inclui o apostador
-                    apostador = Apostador(nome,cpf,ano_nasc)
-                    self.__apostadores.append(apostador)
-                    self.__tela_apostador.msg('Apostador Adicionado')
-                    lido = False
-                except ValueError:
-                    self.__tela_apostador.msg('Ano invalido!')
-
-    def exclui_apostador(self):
-        #exclui apostador
-        #pega o cpf e verifca a existencia do apostador..
-        apostador = self.encontra_apostador_existente('Cpf do apostador para excluir: ')
-        if apostador is not None:
-            self.__apostadores.remove(apostador)
-            self.__tela_apostador.msg('Apostador Excluido')
-
     def encontra_apostador(self, msg: str):
         #encontra o apostador pelo cpf
-        cpf = self.__tela_apostador.pega_dado_str(msg)
+        cpf = self.__tela_apostador.pega_cpf(msg)
         existe = False
         apostador = None
         i = 0
@@ -101,6 +75,51 @@ class ControladorApostador:
         except JaExiste as ja_existe:
             self.__tela_apostador.msg(ja_existe)
         
+    #acoes apostador    
+    def inclui_apostador(self):
+        #inclui apostador
+        #pega o cpf e verifca a nao existencia do apostador..
+        cpf = self.encontra_apostador_nao_existente('Cpf: ')
+        if cpf is not None:
+            #se nao existente pega o resto dos dados
+            #pega o nome..
+            nome = self.__tela_apostador.pega_dado_str('Nome: ')
+            estado = self.__tela_apostador.pega_dado_str('Estado: ')
+            cidade = self.__tela_apostador.pega_dado_str('Cidade: ')
+            lido = True
+            while lido:
+                try:
+                    ano_nasc = self.__tela_apostador.pega_dado_int('Ano de nascimento: ')
+                    #cria e inclui o apostador
+                    apostador = Apostador(nome, cpf, ano_nasc, estado, cidade)
+                    self.__apostadores.append(apostador)
+                    self.__tela_apostador.msg('Apostador Adicionado')
+                    lido = False
+                except ValueError:
+                    self.__tela_apostador.msg('Idade invalida!')
+
+    def exclui_apostador(self):
+        #exclui apostador
+        #pega o cpf e verifca a existencia do apostador..
+        apostador = self.encontra_apostador_existente('Cpf do apostador para excluir: ')
+        if apostador is not None:
+            self.__apostadores.remove(apostador)
+            self.__tela_apostador.msg('Apostador Excluido')
+        
+    def lista_apostador(self):
+        # lista os apostadores
+        try:
+            #se ha apostadores para listar
+            if len(self.__apostadores)>=1:
+                self.__tela_apostador.msg('Apostadores')
+                for i in self.apostadores():
+                    self.__tela_apostador.lista_apostadores(i.nome, i.cpf, i.idade, i.endereco().estado, i.endereco().cidade)
+            else:
+                raise ListaVazia('apostadores')
+        except ListaVazia as vazia:
+            self.__tela_apostador.msg(vazia)
+
+    #alteracao
     def abre_tela_altera_apostador(self):
         #opcoes de alteracao do apostador
         switcher = {
@@ -118,6 +137,11 @@ class ControladorApostador:
             else:
                 funcao_escolhida()
 
+    def altera_endereco(self):
+        apostador = self.encontra_apostador_existente('Cpf do apostador: ')
+        estado = self.__tela_apostador.pega_dado_str('Estado: ')
+        cidade = self.__tela_apostador.pega_dado_str('Cidade: ')
+        apostador.altera_endereco(estado, cidade)
 
     def altera_nome(self):
         #altera nome do apostador
@@ -155,35 +179,7 @@ class ControladorApostador:
                 except ValueError:
                     self.__tela_apostador.msg('Ano invalido')
 
-    def lista_apostador(self):
-        # lista os apostadores
-        try:
-            #se ha apostadores para listar
-            if len(self.__apostadores)>=1:
-                self.__tela_apostador.msg('Apostadores')
-                for i in self.__apostadores:
-                    self.__tela_apostador.lista_apostadores(i.nome, i.cpf, i.idade)
-            else:
-                raise ListaVazia('apostadores')
-        except ListaVazia as vazia:
-            self.__tela_apostador.msg(vazia)
-
-    def lista_apostas(self):
-        #pega o cpf e verifica sua existencia
-        apostador = self.encontra_apostador_existente('Cpf do apostador: ')
-         #se o apostador existir..
-        if apostador is not None:
-            try:
-                if len(apostador.apostas())<=1:
-                    #se ha apostas para listar
-                    self.__tela_apostador.msg('Apostas')
-                    for i in apostador.apostas():
-                        self.__tela_apostador.lista_apostas(i.data, i.jogo.nome, i.numeros)
-                else:
-                    raise ListaVazia('apostas')
-            except ListaVazia as vazia:
-                self.__tela_apostador.msg(vazia)
-
+    #acoes aposta
     def inclui_aposta(self):
         #pega o cpf e verifica sua existencia
         apostador = self.encontra_apostador_existente('Cpf do apostador: ')
@@ -214,5 +210,20 @@ class ControladorApostador:
                     apostador.del_aposta()
                 except NaoExiste as nao_existe:
                     self.__tela_apostador.msg(nao_existe)
-                    
-            
+
+    def lista_apostas(self):
+        #pega o cpf e verifica sua existencia
+        apostador = self.encontra_apostador_existente('Cpf do apostador: ')
+         #se o apostador existir..
+        if apostador is not None:
+            try:
+                if len(apostador.apostas()) >= 1:
+                    #se ha apostas para listar
+                    self.__tela_apostador.msg('Apostas')
+                    for i in apostador.apostas():
+                        self.__tela_apostador.lista_apostas(i.codigo, i.data, i.jogo.nome, i.numeros)
+                else:
+                    raise ListaVazia('apostas')
+            except ListaVazia as vazia:
+                self.__tela_apostador.msg(vazia)
+
