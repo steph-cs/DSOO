@@ -1,18 +1,21 @@
 from entidade.jogo import Jogo
 from datetime import date
 from entidade.abstract_aposta_sorteio import Abstract_aposta_sorteio
-from entidade.exception import QuantidadeNumerosIncorreta, IdadeInvalida, JaExiste, NaoExiste, ListaVazia
+from entidade.exception import QuantidadeNumerosIncorreta, IdadeInvalida, JaExiste, NaoExiste, ListaVazia, NumerosIncorretos
 
 class Aposta(Abstract_aposta_sorteio):
     def __init__(self, codigo: int, data: date, jogo: Jogo, numeros: list):
         super().__init__(data, jogo)
         self.__codigo = codigo
-        #e se a qnt de numeros esta dentro do limite e nao ha rep..
-        if jogo.min_numeros <=len(numeros)<= jogo.max_numeros and self.num_rep(numeros) is False: 
-            self.__numeros = numeros
+        #e se a qnt de numeros esta dentro dos limites e nao ha rep..
+        if jogo.min_numeros <=len(numeros)<= jogo.max_numeros:
+            if self.num_rep(numeros) is False: 
+                self.__numeros = numeros
+            else:
+                raise NumerosIncorretos()
         else:
             raise QuantidadeNumerosIncorreta()
-        self.__apostadores = []
+        self.__apostadores = []  
 
     @property
     def codigo(self):
@@ -28,8 +31,13 @@ class Aposta(Abstract_aposta_sorteio):
 
     @numeros.setter
     def numeros(self, numeros: list):
-        if self.__jogo.min_numeros <=len(numeros)<= self.__jogo.max_numeros and self.num_rep(numeros) is False: 
-            self.__numeros = numeros
+        num_rep = self.num_rep(numeros)
+        limite = self.jogo.min_numeros <=len(numeros)<= self.jogo.max_numeros
+        if limite:
+            if (num_rep is False): 
+                self.__numeros = numeros
+            else:
+                raise NumerosIncorretos()
         else:
             raise QuantidadeNumerosIncorreta()
 

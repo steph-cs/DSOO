@@ -3,10 +3,10 @@ from abc import ABC, abstractmethod
 
 class Pessoa(ABC):
     @abstractmethod
-    def __init__(self, nome, cpf, ano_nascimento ):
+    def __init__(self, nome: str, cpf: str, ano_nascimento: int ):
         self.__nome = nome
         self.__cpf = cpf
-        if date.today().year >= ano_nascimento:
+        if (date.today().year >= ano_nascimento) and ((date.today().year - ano_nascimento) <= 100):
             self.__ano_nascimento = ano_nascimento
         else:
             raise ValueError()
@@ -16,7 +16,7 @@ class Pessoa(ABC):
         return self.__nome
 
     @nome.setter
-    def nome(self, nome):
+    def nome(self, nome: str):
         self.__nome = nome
 
     @property
@@ -24,7 +24,7 @@ class Pessoa(ABC):
         return self.__cpf
 
     @cpf.setter
-    def cpf(self, cpf):
+    def cpf(self, cpf: str):
         self.__cpf = cpf
 
     @property
@@ -32,7 +32,7 @@ class Pessoa(ABC):
         return self.__ano_nascimento
 
     @ano_nascimento.setter
-    def ano_nascimento(self, ano_nascimento):
+    def ano_nascimento(self, ano_nascimento: int):
         if date.today().year >= ano_nascimento:
             self.__ano_nascimento = ano_nascimento
         else:

@@ -1,7 +1,7 @@
 from entidade.exception import QuantidadeNumerosIncorreta
 
 class Jogo():
-    def __init__(self, nome: str, max_numeros: int, min_numeros: int, premio: int):
+    def __init__(self, nome: str, max_numeros: int, min_numeros: int, premio: float):
         self.__nome = nome
         if 0 < min_numeros <= max_numeros <= 15 :
             self.__max_numeros = max_numeros
@@ -45,5 +45,5 @@ class Jogo():
         return self.__premio
 
     @premio.setter
-    def premio(self, premio):
+    def premio(self, premio: float):
         self.__premio = premio
