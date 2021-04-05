@@ -1,9 +1,12 @@
 from entidade.pessoa import Pessoa
+from entidade.endereco import Endereco
+
 from entidade.exception import IdadeInvalida, JaExiste, ListaVazia, NaoExiste
 class Apostador(Pessoa):
-    def __init__(self, nome, cpf, ano_nascimento):
+    def __init__(self, nome, cpf, ano_nascimento, estado, cidade):
         super().__init__(nome, cpf, ano_nascimento)
         self.__apostas = []
+        self.__endereco = Endereco(estado, cidade)
 
     def add_aposta(self, aposta):
         from entidade.aposta import Aposta
@@ -40,6 +43,14 @@ class Apostador(Pessoa):
                     aposta.del_apostador(self)
             else:
                 raise NaoExiste('aposta')
+
+    def altera_endereco(self, estado, cidade):
+        endereco = self.__endereco
+        endereco.estado = estado
+        endereco.cidade = cidade
+        
+    def endereco(self):
+        return self.__endereco
 
     def apostas(self):
         #retorna a lista de apostas que o apostador possui
