@@ -5,25 +5,29 @@ from entidade.exception import QuantidadeNumerosIncorreta, IdadeInvalida, JaExis
 
 class Aposta(Abstract_aposta_sorteio):
     def __init__(self, codigo: int, data: date, jogo: Jogo, numeros: list):
-        super().__init__(data, jogo)
-        self.__codigo = codigo
+        super().__init__(data, codigo)
         #e se a qnt de numeros esta dentro dos limites e nao ha rep..
         if jogo.min_numeros <=len(numeros)<= jogo.max_numeros:
             if self.num_rep(numeros) is False: 
                 self.__numeros = numeros
+                self.__jogo = jogo
             else:
                 raise NumerosIncorretos()
         else:
             raise QuantidadeNumerosIncorreta()
-        self.__apostadores = []  
+    
+        self.__apostadores = []
 
     @property
-    def codigo(self):
-        return self.__codigo
+    def jogo(self):
+        return self.__jogo
 
-    @codigo.setter
-    def codigo(self, codigo: int):
-        self.__codigo = codigo
+    @jogo.setter
+    def jogo(self, jogo: Jogo):
+        if jogo.min_numeros <= len(self.numeros) <= jogo.max_numeros:
+            self.__jogo = jogo
+        else:
+            raise QuantidadeNumerosIncorreta()    
 
     @property
     def numeros(self):
@@ -60,7 +64,7 @@ class Aposta(Abstract_aposta_sorteio):
             else:
                 raise JaExiste('apostador')
 
-    def del__apostador(self, apostador):
+    def del_apostador(self, apostador):
         from entidade.apostador import Apostador
         # se apostador do tipo Apostador
         if isinstance(apostador, Apostador):

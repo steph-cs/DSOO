@@ -6,10 +6,10 @@ from entidade.exception import QuantidadeNumerosIncorreta, NumerosIncorretos
 
 class Abstract_aposta_sorteio(ABC):
     @abstractmethod
-    def __init__(self, data: date, jogo: Jogo):
+    def __init__(self, data:date, codigo: int):
         self.__data = data
-        self.__jogo = jogo
-
+        self.__codigo = codigo
+        
     @property
     def data(self):
         return self.__data
@@ -17,18 +17,15 @@ class Abstract_aposta_sorteio(ABC):
     @data.setter
     def data(self, data: date):
         self.__data = data
-
-    @property
-    def jogo(self):
-        return self.__jogo
-
-    @jogo.setter
-    def jogo(self, jogo: Jogo):
-        if jogo.min_numeros <= len(self.numeros) <= jogo.max_numeros:
-            self.__jogo = jogo
-        else:
-            raise QuantidadeNumerosIncorreta()
     
+    @property
+    def codigo(self):
+        return self.__codigo
+
+    @codigo.setter
+    def codigo(self, codigo: int):
+        self.__codigo = codigo
+
     @property
     @abstractmethod
     def numeros(self):

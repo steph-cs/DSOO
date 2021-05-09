@@ -8,6 +8,8 @@ from controle.controlador_sorteio import ControladorSorteio
 
 
 class ControladorSistema:
+    __instance = None
+
     def __init__(self):
         self.__tela_sistema = TelaSistema(self)
         self.__controlador_loteria = ControladorLoteria(self)
@@ -15,6 +17,11 @@ class ControladorSistema:
         self.__controlador_aposta = ControladorAposta(self)
         self.__controlador_jogo = ControladorJogo(self)
         self.__controlador_sorteio = ControladorSorteio(self)
+
+    def __new__(cls, *args, **kwargs):
+        if ControladorSistema.__instance is None:
+            ControladorSistema.__instance = object.__new__(cls)
+        return ControladorSistema.__instance
 
     def inicia(self):
         self.abre_tela_inicial()

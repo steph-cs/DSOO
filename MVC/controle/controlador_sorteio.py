@@ -1,13 +1,21 @@
 from entidade.sorteio import Sorteio
 from limite.tela_sorteio import TelaSorteio
 from datetime import date, timedelta
-from entidade.exception import JaExiste, NaoExiste, ListaVazia, QuantidadeNumerosIncorreta
+from entidade.exception import JaExiste, NaoExiste, ListaVazia, QuantidadeNumerosIncorreta, NumerosIncorretos
+from persistencia.sorteio_dao import SorteioDAO
 
 class ControladorSorteio():
+    __instance = None
+
     def __init__(self, controlador_sistema):
         self.__controlador_sistema = controlador_sistema
         self.__tela_sorteio = TelaSorteio(self)
-        self.__sorteios = []
+        self.__dao = SorteioDAO()
+    
+    def __new__(cls, *args, **kwargs):
+        if ControladorSorteio.__instance is None:
+            ControladorSorteio.__instance = object.__new__(cls)
+        return ControladorSorteio.__instance
 
     def inicia(self):
         #abre tela inicial
@@ -17,178 +25,136 @@ class ControladorSorteio():
         #tela inicial
         switcher = {
             0 : False,
-            1 : self.inclui_sorteio,
-            2 : self.abre_tela_altera_sorteio,
-            3 : self.exclui_sorteio,
-            4 : self.lista_sorteio
+            'incluir' : self.inclui_sorteio,
+            'alterar' : self.abre_tela_altera_sorteio,
+            'excluir' : self.exclui_sorteio,
         }
         op = True
         while op:
-            opcao = self.__tela_sorteio.mostra_tela_opcoes()
-            funcao_escolhida = switcher[opcao]
+            self.lista_sorteio()
+
+            self.listagem_jogos()
+
+            button, info = self.__tela_sorteio.mostra_tela_opcoes()
+            funcao_escolhida = switcher[button]
             if funcao_escolhida is False:
                 op = False
             else:
-                funcao_escolhida()
+                self.__tela_sorteio.close()
+                funcao_escolhida(info)
+
+#listagens
+    def listagem(self):
+        return self.__tela_sorteio.listagem()
+
+    def listagem_jogos(self):
+        control = self.__controlador_sistema.controlador_jogo()
+        jogos = list((control.jogos().keys()))
+        self.__tela_sorteio.jogos(jogos)
 
     def sorteios(self):
-        return sorted(self.__sorteios, key= lambda x : x.data)
-
-    def encontra_sorteio(self, jogo, data):
-        #encontra o sorteio 
-        sorteio = None
-        existe = False 
-        i = 0
-        while existe is False and i< len(self.__sorteios):
-            if (self.__sorteios[i].data == data) and (self.__sorteios[i].jogo.nome == jogo.nome):
-                sorteio = self.__sorteios[i]
-                existe = True
-            else:
-                i+=1
-        #retorna o sorteio se encontrado ou None
-        return sorteio
-    
-
-    def inclui_sorteio(self):
-        #inclui sorteio
-        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
-        if jogo is not None:
-            data = self.__tela_sorteio.data_sorteio()
-            if data is not None:
-                try:
-                    #verifica(jogo,data) --> n deve exestir
-                    sorteio = self.encontra_sorteio(jogo, data)
-                    if sorteio is None:
-                        lido = True
-                        while lido:
-                            numeros = self.__tela_sorteio.le_ints()
-                            self.__sorteios.append(Sorteio(data, jogo, numeros))
-                            self.__tela_sorteio.msg('Sorteio adicionado!')
-                            lido = False
-                    else:
-                        raise JaExiste('sorteio')
-                except JaExiste as ja_existe:
-                    self.__tela_sorteio.msg(ja_existe)
-                except QuantidadeNumerosIncorreta as qnt_incorreta:
-                    self.__tela_sorteio.msg('Min do jogo: {}'.format(jogo.min_numeros))
-                    self.__tela_sorteio.msg(qnt_incorreta)
-
-    def exclui_sorteio(self):
-        #exclui sorteio
-        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
-        if jogo is not None:
-            try:
-                data = self.__tela_sorteio.data_sorteio()
-                #verifica(jogo,data) --> deve exestir
-                sorteio = self.encontra_sorteio(jogo, data)
-                if sorteio is not None:
-                    self.__sorteios.remove(sorteio)
-                    self.__tela_sorteio.msg('Sorteio deletado')
-                else:
-                    raise NaoExiste('sorteio')
-            except NaoExiste as n_existe:
-                self.__tela_sorteio.msg(n_existe)
+        return {key: value for key, value in sorted(self.__dao.get_all().items(), key = lambda x: x[1].data)}
 
     def lista_sorteio(self):
-        # lista os sorteios
+        self.__tela_sorteio.limpar_listagem()
+        if len(self.__dao.get_all()) >= 1:
+            for i in self.sorteios().values():
+                self.__tela_sorteio.listagem_sorteio(i.codigo, i.data, i.jogo.nome,i.jogo.premio, i.numeros)
+    
+#inclusao/exclusao
+    def inclui_sorteio(self, infos: dict):
+        if infos is not None:
+            codigo = infos['cod']
+            try:
+                self.__dao.get_all()[codigo] 
+            except KeyError:
+                try:
+                    jogo = self.__controlador_sistema.controlador_jogo().jogos()[infos['jogo']]
+                    numeros = infos['num']
+                    data = self.__tela_sorteio.data_sorteio(infos['data'])
+                    if data is not None:
+                        sorteio = Sorteio(codigo, data, jogo, numeros)
+                        self.__dao.add(codigo, sorteio)
+                        self.__tela_sorteio.erro('Sorteio Adicionado!')
+                except KeyError:
+                    self.__tela_sorteio.erro('Jogo nao existe!!')
+                except QuantidadeNumerosIncorreta as qnt_incorreta:
+                    #se qnt de num incorreta mostra o max e min permitido de acordo c o jogo escolhido
+                    self.__tela_sorteio.erro(
+                    '''{}
+                    Min: {}'''.format(qnt_incorreta, jogo.min_numeros))
+                except NumerosIncorretos as num_incorretos:
+                    self.__tela_sorteio.erro(num_incorretos)    
+            else:
+                self.__tela_sorteio.erro('Aposta Ja Existe!')
+
+    def exclui_sorteio(self, infos: dict):
+        if infos is not None:
+            try:
+                for sorteio in infos['sorteios']:
+                    self.__dao.remove(sorteio.split()[0])
+            except KeyError:
+                self.__tela_sorteio.erro('Sorteio Nao Existe!')
+
+# acoes altera sorteio
+
+    def abre_tela_altera_sorteio(self, info: dict):
+        if info is not None:
+            try:
+                sorteio = self.__dao.get(info['sorteio'])
+                cod = sorteio.codigo
+                jogo = sorteio.jogo.nome
+                data = sorteio.data
+                num = sorteio.numeros
+                
+                infos = self.__tela_sorteio.mostra_tela_alterar(cod, data, jogo, num)
+            
+                if infos is not None:
+                    switcher = {
+                        'cod' : self.altera_codigo,
+                        'data' : self.altera_data,
+                        'jogo' : self.altera_jogo,
+                        'num' : self.altera_numeros
+                    }
+                    for i in ['cod', 'data', 'jogo', 'num']:
+                        if i in infos:
+                            switcher[i](sorteio, infos[i])       
+            except KeyError:
+                self.__tela_aposta.erro('Sorteio nao existe!')
+            except QuantidadeNumerosIncorreta as qnt_incorreta:
+                self.__tela_sorteio.erro(qnt_incorreta)
+            except NumerosIncorretos as num_incorretos:
+                self.__tela_sorteio.erro(num_incorretos)
+        #opcoes de alteracao do sorteio
+
+    def altera_codigo(self, sorteio, cod):
         try:
-            if len(self.__sorteios) >= 1:
-                self.__tela_sorteio.msg('Sorteios')
-                for i in self.sorteios():
-                    self.__tela_sorteio.lista_sorteio(i.data, i.jogo.nome,i.jogo.premio, i.numeros)
-            else:
-                raise ListaVazia('sorteios')
-        except ListaVazia as vazia:
-            self.__tela_sorteio.msg(vazia)
+            self.__dao.get(cod)
+            self.__tela_sorteio.erro('Sorteio ja existe!')
+        except KeyError:
+            self.__dao.remove(sorteio.codigo)
+            sorteio.codigo = cod
+            self.__dao.add(cod, sorteio)
 
-    def abre_tela_altera_sorteio(self):
-        #opcoes de alteracao do sorteiodor
-        switcher = {
-            0 : False ,
-            1 : self.altera_data,
-            2 : self.altera_jogo,
-            3 : self.altera_numeros,
-        }
-        op = True
-        while op:
-            opcao = self.__tela_sorteio.opcoes_alterar()
-            funcao_escolhida = switcher[opcao]
-            if funcao_escolhida is False:
-                op = False
-            else:
-                funcao_escolhida()
-
-    def altera_data(self):
+    def altera_data(self, sorteio, data):
         #altera data da sorteio
         #pega jogo, data verifica a existencia do sorteio
-        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
-        if jogo is not None:
-            try:
-                data = self.__tela_sorteio.data_sorteio()
-                #verifica(jogo,data) --> deve exestir
-                sorteio = self.encontra_sorteio(jogo, data)
-                if sorteio is not None:
-                    self.__tela_sorteio.msg('Nova data')
-                    #nova data
-                    nova_data = self.__tela_sorteio.data_sorteio()
-                    #verifica(jogo, nova data) --> n deve existir
-                    if self.encontra_sorteio(jogo, nova_data) is None:
-                        sorteio.data = nova_data
-                        self.__tela_sorteio.msg('Data alterada!')
-                    else:
-                        raise JaExiste('sorteio')
-                else:
-                    raise NaoExiste('sorteio')
-            except NaoExiste as n_existe:
-                self.__tela_sorteio.msg(n_existe)
-            except JaExiste as existe:
-                self.__tela_sorteio.msg(existe)
+        data = self.__tela_sorteio.data_sorteio(data)
+        if data is not None:
+            self.__dao.remove(sorteio.codigo)
+            sorteio.data = data
+            self.__dao.add(sorteio.codigo, sorteio)
 
-    def altera_jogo(self):
-        #altera jogo da sorteio
-        #pega jogo, data verifica a existencia do sorteio
-        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
-        if jogo is not None:
-            try:
-                data = self.__tela_sorteio.data_sorteio()
-                #verifica(jogo,data) --> deve exestir
-                sorteio = self.encontra_sorteio(jogo, data)
-                if sorteio is not None:
-                    #pega o novo jogo e verifica a nao existencia do sorteio 
-                    novo_jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do novo jogo: ')
-                    #verifica(novo jogo, data) --> n deve existir
-                    if self.encontra_sorteio(novo_jogo, data) is None:
-                        sorteio.jogo = novo_jogo
-                        self.__tela_sorteio.msg('Jogo alterado!')
-                    else:
-                        raise JaExiste('sorteio')
-                else:
-                    raise NaoExiste('sorteio')
-            except NaoExiste as n_existe:
-                self.__tela_sorteio.msg(n_existe)
-            except JaExiste as existe:
-                self.__tela_sorteio.msg(existe)
-            except QuantidadeNumerosIncorreta as qnt_incorreta:
-                self.__tela_sorteio.msg(qnt_incorreta)
+    def altera_jogo(self, sorteio, jogo):
+        try:
+            jogo = self.__controlador_sistema.controlador_jogo().jogos()[jogo]
+            self.__dao.remove(sorteio.codigo)
+            sorteio.jogo = jogo
+            self.__dao.add(sorteio.codigo, sorteio)
+        except KeyError:
+            self.__tela_sorteio.erro('Jogo nao existe!!')
 
-    def altera_numeros(self):
-        #altera numeros da sorteio
-        #pega jogo, data verifica a existencia do sorteio
-        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
-        if jogo is not None:
-            try:
-                data = self.__tela_sorteio.data_sorteio()
-                #verifica(jogo,data) --> deve exestir
-                sorteio = self.encontra_sorteio(jogo, data)
-                if sorteio is not None:
-                    numeros = self.__tela_sorteio.le_ints()
-                    sorteio.numeros = numeros
-                    self.__tela_sorteio.msg('Numeros alterados!')
-                else:
-                    raise NaoExiste('sorteio')
-            except NaoExiste as n_existe:
-                self.__tela_sorteio.msg(n_existe)
-            except QuantidadeNumerosIncorreta as qnt_incorreta:
-                self.__tela_sorteio.msg(qnt_incorreta)
-
-    
+    def altera_numeros(self, sorteio, num):
+        self.__dao.remove(sorteio.codigo)
+        sorteio.numeros = num
+        self.__dao.add(sorteio.codigo, sorteio)

@@ -1,12 +1,20 @@
-from entidade.jogo import Jogo
 from limite.tela_jogo import TelaJogo
+from entidade.jogo import Jogo
 from entidade.exception import JaExiste, NaoExiste, QuantidadeNumerosIncorreta, ListaVazia
+from persistencia.jogo_dao import JogoDAO
 
 class ControladorJogo():
+    __instance = None
+
     def __init__(self, controlador_sistema):
         self.__controlador_sistema = controlador_sistema
         self.__tela_jogo = TelaJogo(self)
-        self.__jogos = []
+        self.__dao = JogoDAO()
+    
+    def __new__(cls, *args, **kwargs):
+        if ControladorJogo.__instance is None:
+            ControladorJogo.__instance = object.__new__(cls)
+        return ControladorJogo.__instance
 
     def inicia(self):
         #abre tela inicial
@@ -16,165 +24,111 @@ class ControladorJogo():
         #tela inicial
         switcher = {
             0 : False,
-            1 : self.inclui_jogo,
-            2 : self.abre_tela_altera_jogo,
-            3 : self.exclui_jogo,
-            4 : self.lista_jogo
+            'incluir' : self.inclui_jogo,
+            'alterar' : self.abre_tela_altera_jogo,
+            'excluir' : self.exclui_jogo
         }
         op = True
         while op:
-            opcao = self.__tela_jogo.mostra_tela_opcoes()
-            funcao_escolhida = switcher[opcao]
+
+            self.lista_jogo()
+            button, info = self.__tela_jogo.mostra_tela_opcoes()
+            funcao_escolhida = switcher[button]
             if funcao_escolhida is False:
                 op = False
             else:
-                funcao_escolhida()
+                self.__tela_jogo.close()
+                funcao_escolhida(info)
 
     def jogos(self):
-        return sorted(self.__jogos , key= lambda x : x.nome)
+        return {key: value for key, value in sorted(self.__dao.get_all().items(), key = lambda x: x[1].nome)}
 
-    def encontra_jogo(self, msg: str):
-        nome = self.__tela_jogo.pega_dado_str(msg)
-        existe = False 
-        jogo = None
-        i = 0
-        while existe is False and i< len(self.__jogos):
-            if self.__jogos[i].nome == nome:
-                #se encontrado um jogo com mesmo nome...
-                jogo = self.__jogos[i]
-                existe = True
-            else:
-                i+=1
-        return {'jogo':jogo, 'nome': nome}
-
-    def encontra_jogo_existente(self, msg: str):
-        #usada qnd é preciso que o jogo exista p realizar uma acao
-        try:
-            #pega e verifica a existencia do jogo
-            jogo = self.encontra_jogo(msg)['jogo']
-            if jogo is None:
-                raise NaoExiste('Jogo')
-            return jogo
-        except NaoExiste as nao_existe:
-            self.__tela_jogo.msg(nao_existe)
-        # retorna o jogo se encontrado ou None
-
-    def encontra_jogo_nao_existente(self, msg: str):
-        #usada qnd é preciso que o jogo nao exista p realizar uma acao
-        try:
-            #pega e verifica a existencia do jogo
-            jogo = self.encontra_jogo(msg)
-            if jogo['jogo'] is not None:
-                raise JaExiste('Jogo')
-            return jogo['nome']
-        except JaExiste as ja_existe:
-            self.__tela_jogo.msg(ja_existe)
-        # retorna o nome do jogo se nenhum igual encontrado ou None
-
-
-    def inclui_jogo(self):
+    def inclui_jogo(self, infos: dict):
         #pega e verifca a nao existencia do jogo..
-        jogo = self.encontra_jogo_nao_existente('Nome do jogo: ')
-        if jogo is not None:
-            lido = True
-            premio = self.__tela_jogo.pega_premio()
-            while lido:
+        if infos is not None:
+            nome = infos['nome']
+            try:
+                existe = self.__dao.get_all()[nome] 
+            except KeyError:
+                lido = True
+                premio = infos['premio']
                 try:        
                     #se nao existente pega o resto dos dados
-                    max_num = self.__tela_jogo.pega_dado_int('Maximo de numeros: ')
-                    min_num = self.__tela_jogo.pega_dado_int('Minimo de numeros: ')
+                    max_num = infos['max']
+                    min_num = infos['min']
                     #cria e inclui o jogo
-                    jogo = Jogo(jogo, max_num, min_num, premio)
-                    self.__jogos.append(jogo)
-                    self.__tela_jogo.msg('Jogo Adicionado')
-                    lido = False
+                    jogo = Jogo(nome, max_num, min_num, premio)
+                    #self.__jogos.append(jogo)
+                    self.__dao.add(nome, jogo)
+                    self.__tela_jogo.erro('Jogo Adicionado')
                 except QuantidadeNumerosIncorreta as qnt_incorreta:
-                    self.__tela_jogo.msg(qnt_incorreta)
+                    self.__tela_jogo.erro(qnt_incorreta)
+            else:
+                self.__tela_jogo.erro('Jogo Ja Existe!')
 
-    def exclui_jogo(self):
+    def exclui_jogo(self, infos: dict):
         #exclui jogo
         #pede o nome do jogo para alterar..
-        jogo = self.encontra_jogo_existente('Nome do jogo para excluir: ')
-        if jogo is not None:
-            self.__jogos.remove(jogo)
-            self.__tela_jogo.msg('Jogo Excluido')
+        if infos is not None:
+            try:
+                for jogo in infos['jogos']:
+                    self.__dao.remove(jogo.split()[0])
+            except KeyError:
+                self.__tela_jogo.erro('Jogo Nao Existe!')
 
     def lista_jogo(self):
         # lista os jogos
-        try:
-            if len(self.__jogos) >= 1:
-                self.__tela_jogo.msg('Jogos')
-                for i in self.jogos():
-                    self.__tela_jogo.lista_jogo(i.nome, i.max_numeros, i.min_numeros, i.premio)
-            else:
-                raise ListaVazia('jogos')
-        except ListaVazia as vazia:
-            self.__tela_jogo.msg(vazia)
+        self.__tela_jogo.limpar_listagem()
+        if len(self.__dao.get_all()) >= 1:
+            for i in self.jogos().values():
+                self.__tela_jogo.listagem_jogo(i.nome, i.max_numeros, i.min_numeros, i.premio)
 
     #alteracao
-    def abre_tela_altera_jogo(self):
+    def abre_tela_altera_jogo(self, info: dict):
         #opcoes de alteracao do apostador
-        switcher = {
-            0 : False ,
-            1 : self.altera_nome,
-            2 : self.altera_max_numeros,
-            3 : self.altera_min_numeros,
-            4 : self.altera_premio
-        }
-        op = True
-        while op:
-            opcao = self.__tela_jogo.opcoes_alterar()
-            funcao_escolhida = switcher[opcao]
-            if funcao_escolhida is False:
-                op = False
-            else:
-                funcao_escolhida()
+        if info is not None:
+            try:
+                jogo = self.__dao.get(info['jogo'])
+                nome = jogo.nome
+                premio = jogo.premio
+                max = jogo.max_numeros
+                min = jogo.min_numeros
+                infos = self.__tela_jogo.mostra_tela_alterar(nome, premio, max, min)
+                if infos is not None:
+                    for i in ['nome', 'premio','max', 'min']:
+                        if i in infos:
+                            switcher = {
+                            'nome' : self.altera_nome,
+                            'premio' : self.altera_premio,
+                            'max' : self.altera_max,
+                            'min' : self.altera_min
+                            }
+                            switcher[i](jogo, infos[i])       
+            except KeyError:
+                self.__tela_jogo.erro('Jogo nao existe!')
+            except QuantidadeNumerosIncorreta as qnt_incorreta:
+                self.__tela_jogo.erro(qnt_incorreta)
 
-    def altera_nome(self):
-        #altera nome do jogo
-        #pede o nome do jogo para alterar..
-        jogo = self.encontra_jogo_existente('Nome do jogo para alterar: ')
-        if jogo is not None:
-            #pede o novo nome..
-            nome = self.encontra_jogo_nao_existente('Novo nome do jogo: ')
-            #realiza a alteracao
-            if nome is not None:
-                jogo.nome = nome 
-                self.__tela_jogo.msg('Nome alterado!')    
-
-    def altera_max_numeros(self):
-        #altera o max numeros
-        #pede o nome do jogo para alterar..
+    def altera_nome(self, jogo, nome):
         try:
-            jogo = self.encontra_jogo_existente('Nome do jogo para alterar: ')
-            if jogo is not None:
-                #pede o novo max numeros..
-                max_num = self.__tela_jogo.pega_dado_int('Novo maximo de numeros: ')
-                #realiza a alteracao
-                jogo.max_numeros = max_num
-                self.__tela_jogo.msg('Maximo de numeros alterados')
-        except QuantidadeNumerosIncorreta as qnt_incorreta:
-            self.__tela_jogo.msg(qnt_incorreta)
+            self.__dao.get(nome)
+            self.__tela_jogo.erro('Jogo ja existe!')
+        except KeyError:
+            self.__dao.remove(jogo.nome)
+            jogo.nome = nome
+            self.__dao.add(nome, jogo)
 
-    def altera_min_numeros(self):
-        #altera o min numeros
-        #pede o nome do jogo para alterar..
-        try:
-            jogo = self.encontra_jogo_existente('Nome do jogo para alterar: ')
-            if jogo is not None:
-                #pede o novo min numeros..
-                min_numeros = self.__tela_jogo.pega_dado_int('Novo minimo de numeros: ')
-                #realiza a alteracao
-                jogo.min_numeros = min_numeros
-        except QuantidadeNumerosIncorreta as qnt_incorreta:
-            self.__tela_jogo.msg(qnt_incorreta)
+    def altera_premio(self, jogo, premio):
+        self.__dao.remove(jogo.nome)
+        jogo.premio = premio
+        self.__dao.add(jogo.nome, jogo)
 
-    def altera_premio(self):
-        #altera o premmio
-        #pede o nome do jogo para alterar..
-        jogo = self.encontra_jogo_existente('Nome do jogo para alterar: ')
-        if jogo is not None:
-            #pede o novo valor do premio..
-            premio = self.__tela_jogo.pega_premio()
-            #realiza a alteracao
-            jogo.premio = premio
+    def altera_max(self, jogo, max):
+        self.__dao.remove(jogo.nome)
+        jogo.max_numeros = max
+        self.__dao.add(jogo.nome, jogo)
+
+    def altera_min(self, jogo, min):
+        self.__dao.remove(jogo.nome)
+        jogo.min_numeros = min
+        self.__dao.add(jogo.nome, jogo)

@@ -43,11 +43,6 @@ class Apostador(Pessoa):
                     aposta.del_apostador(self)
             else:
                 raise NaoExiste('aposta')
-
-    def altera_endereco(self, estado, cidade):
-        endereco = self.__endereco
-        endereco.estado = estado
-        endereco.cidade = cidade
         
     def endereco(self):
         return self.__endereco
@@ -55,4 +50,3 @@ class Apostador(Pessoa):
     def apostas(self):
         #retorna a lista de apostas que o apostador possui
         return self.__apostas
-        

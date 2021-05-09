@@ -18,3 +18,4 @@ class Endereco:
     @cidade.setter
     def cidade(self, cidade: str):
         self.__cidade = cidade
+
