@@ -1,15 +1,16 @@
 from datetime import date
 from abc import ABC, abstractmethod
+from entidade.exception import IdadeInvalida
 
 class Pessoa(ABC):
     @abstractmethod
-    def __init__(self, nome: str, cpf: str, ano_nascimento: int ):
+    def __init__(self, nome: str, cpf: int, ano_nascimento: int ):
         self.__nome = nome
         self.__cpf = cpf
         if (date.today().year >= ano_nascimento) and ((date.today().year - ano_nascimento) <= 100):
             self.__ano_nascimento = ano_nascimento
         else:
-            raise ValueError()
+            raise IdadeInvalida()
 
     @property
     def nome(self):
@@ -24,7 +25,7 @@ class Pessoa(ABC):
         return self.__cpf
 
     @cpf.setter
-    def cpf(self, cpf: str):
+    def cpf(self, cpf: int):
         self.__cpf = cpf
 
     @property

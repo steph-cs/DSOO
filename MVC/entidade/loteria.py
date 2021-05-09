@@ -5,9 +5,16 @@ from datetime import date, timedelta
 from entidade.exception import QuantidadeNumerosIncorreta, NaoExiste, JaExiste, ListaVazia
 
 class Loteria():
+    __instance = None
+
     def __init__(self):
         self.__apostas = []
         self.__sorteios = []
+
+    def __new__(cls, *args, **kwargs):
+        if Loteria.__instance is None:
+            Loteria.__instance = object.__new__(cls)
+        return Loteria.__instance
 
 #acoes aposta
     def add_aposta(self, aposta: Aposta):
@@ -32,9 +39,12 @@ class Loteria():
         if isinstance(jogo, Jogo):
             apostas = []
             for aposta in self.apostas():
-                if aposta.jogo == jogo:
+                if aposta.jogo.nome == jogo.nome:
                     apostas.append(aposta)
-            return apostas
+            if len(apostas) >= 1:
+                return apostas
+            else:
+                raise ListaVazia('apostas por jogo')
 
     def apostas_por_data(self, data_min: date, data_max: date):
         apostas = []
@@ -80,7 +90,7 @@ class Loteria():
         for aposta in self.apostas():
             cont = 0
             for sorteio in self.sorteios():
-                if (aposta.jogo == sorteio.jogo) and (sorteio.data - timedelta(days=7)<aposta.data<= sorteio.data):
+                if (aposta.jogo.nome == sorteio.jogo.nome) and (sorteio.data - timedelta(days=7)<aposta.data<= sorteio.data):
                     for numero in sorteio.numeros:
                         if numero in aposta.numeros:
                             cont += 1
@@ -130,7 +140,7 @@ class Loteria():
             if jogo is None:
                 apostas = self.apostas_ganhas()[-qnt:]
             else:
-                apostas = self.ganhadores_por_jogo(jogo)[-qnt]
+                apostas = self.ganhadores_por_jogo(jogo)[-qnt:]
             return apostas
         else:
             raise ListaVazia('apostas ganhas')

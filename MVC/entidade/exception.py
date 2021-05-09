@@ -2,6 +2,10 @@ class IdadeInvalida(Exception):
     def __init__(self):
         super().__init__('apostador deve ter +18 !!')
 
+class AnoInvalido(Exception):
+    def __init__(self):
+        super().__init__('Ano inserido invalido !!')
+
 class QuantidadeNumerosIncorreta(Exception):
     def __init__(self):
         super().__init__('Quantidade de numeros invalida!!')
@@ -22,10 +26,10 @@ class ListaVazia(Exception):
     def __init__(self, opcao):
         super().__init__('Lista de {} está vazia!!'.format(opcao))
 
-class CpfQuantidadeIncorreta(Exception):
+class CodigoInvalido(Exception):
     def __init__(self):
-        super().__init__('Cpf deve conter 14 digitos!')
+        super().__init__('Codigo invalido!')
 
-class CpfFormatoIncorreto(Exception):
+class CampoVazio(Exception):
     def __init__(self):
-        super().__init__('Digite o cpf no formato 000.000.000-00')
+        super().__init__('Campo(s) Vazio(s)!')

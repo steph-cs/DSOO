@@ -1,13 +1,21 @@
 from limite.tela_aposta import TelaAposta
 from entidade.aposta import Aposta
 from entidade.exception import JaExiste, NaoExiste, QuantidadeNumerosIncorreta, ListaVazia, IdadeInvalida, NumerosIncorretos
+from persistencia.aposta_dao import ApostaDAO
 
 
 class ControladorAposta:
+    __instance = None
+
     def __init__(self,controlador_sistema):
         self.__controlador_sistema = controlador_sistema
         self.__tela_aposta = TelaAposta(self)
-        self.__apostas = []
+        self.__dao = ApostaDAO()
+    
+    def __new__(cls, *args, **kwargs):
+        if ControladorAposta.__instance is None:
+            ControladorAposta.__instance = object.__new__(cls)
+        return ControladorAposta.__instance
 
     def inicia(self):
         #abre tela inicial
@@ -17,234 +25,194 @@ class ControladorAposta:
         #tela inicial
         switcher = {
             0 : False,
-            1 : self.inclui_aposta,
-            2 : self.abre_tela_altera_aposta,
-            3 : self.exclui_aposta,
-            4 : self.lista_aposta,
-            5 : self.lista_apostadores,
-            6 : self.inclui_apostador,
-            7 : self.exclui_apostador
+            'incluir' : self.inclui_aposta,
+            'alterar' : self.abre_tela_altera_aposta,
+            'excluir' : self.exclui_aposta,
+            'apostadores' : self.lista_apostadores,
+            'add-apostador' : self.inclui_apostador,
+            'del-apostador' : self.exclui_apostador
         }
         op = True
         while op:
-            opcao = self.__tela_aposta.mostra_tela_opcoes()
-            funcao_escolhida = switcher[opcao]
+            self.lista_aposta()
+
+            self.listagem_jogos()
+
+            self.listagem_geral_apostadores()
+            button, info = self.__tela_aposta.mostra_tela_opcoes()
+            funcao_escolhida = switcher[button]
             if funcao_escolhida is False:
                 op = False
             else:
-                funcao_escolhida()
+                self.__tela_aposta.close()
+                funcao_escolhida(info)
+
+    def listagem_jogos(self):
+        control = self.__controlador_sistema.controlador_jogo()
+        jogos = list((control.jogos().keys()))
+        self.__tela_aposta.jogos(jogos)
+    
+    def listagem_geral_apostadores(self):
+        self.__controlador_sistema.controlador_apostador().lista_apostador()
+        apostadores = (self.__controlador_sistema.controlador_apostador().listagem())
+        self.__tela_aposta.apostadores_geral(apostadores)
 
     def apostas(self):
         #retorna a lista de apostas ordenada por data
-        return sorted(self.__apostas, key= lambda x : x.data )
+        return {key: value for key, value in sorted(self.__dao.get_all().items(), key = lambda x: x[1].data)}
 
-    def encontra_aposta(self, msg: str):
-        #encontra aposta pelo codigo
-        codigo = self.__tela_aposta.pega_dado_int(msg)
-        existe = False
-        aposta = None
-        i = 0
-        while existe is False and i< len(self.__apostas):
-            if self.__apostas[i].codigo == codigo:
-                #se encontrado uma aposta com mesmo codigo...
-                aposta = self.__apostas[i]
-                existe = True
-            else:
-                i+=1
-        return {'aposta': aposta, 'codigo': codigo}
-    
-    def encontra_aposta_existente(self, msg: str):
-        #usada qnd é preciso que a aposta exista p realizar uma acao
-        try:
-            #pega e verifica a existencia da aposta
-            aposta = self.encontra_aposta(msg)['aposta']
-            if aposta is None:
-                raise NaoExiste('Aposta')
-            return aposta
-        except NaoExiste as nao_existe:
-            self.__tela_aposta.msg(nao_existe)
-
-    def encontra_aposta_nao_existente(self, msg: str):
-        #usada qnd é preciso que a aposta nao exista p realizar uma acao
-        try:
-            #pega e verifica a nao existencia da aposta
-            aposta = self.encontra_aposta(msg)
-            if aposta['aposta'] is not None:
-                raise JaExiste('Aposta')
-            return aposta['codigo']
-        except JaExiste as ja_existe:
-            self.__tela_aposta.msg(ja_existe)
-
-    # acoes aposta
-    def inclui_aposta(self):
-        #inclui aposta
-        #define se o jogo existe ou nao
-        jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Nome do jogo: ')
-        #define se a aposta existe ou nao
-        if jogo is not None:
-            codigo = self.encontra_aposta_nao_existente('Codigo: ')
-            if codigo is not None:
-                #define a data
-                data = self.__tela_aposta.pega_data()
-                lido = True
-                while lido:
-                    try:
-                        #define a lista de numeros 
-                        numeros = sorted(self.__tela_aposta.le_ints())
-                        #tenta criar a aposta
-                        aposta = Aposta(codigo, data, jogo, numeros)
-                        #se criada adicionada na lista de apostas
-                        self.__apostas.append(aposta)
-                        self.__tela_aposta.msg('Aposta Adicionada')
-                        lido = False
-                    except QuantidadeNumerosIncorreta as qnt_incorreta:
-                        #se qnt de num incorreta mostra o max e min permitido de acordo c o jogo escolhido
-                        self.__tela_aposta.msg('Max: {}  Min: {}'.format(jogo.max_numeros, jogo.min_numeros))
-                        self.__tela_aposta.msg(qnt_incorreta)
-                    except NumerosIncorretos as num_incorretos:
-                        self.__tela_aposta.msg(num_incorretos)
-
-    def exclui_aposta(self):
-        #exclui aposta
-        #pega o codigo e verifca a existencia da aposta..
-        aposta = self.encontra_aposta_existente('Codigo da aposta para excluir: ')
-        if aposta is not None:
+# acoes aposta
+    def inclui_aposta(self, infos: dict):
+        if infos is not None:
+            codigo = infos['cod']
             try:
-                self.__apostas.remove(aposta)
-                self.__tela_aposta.msg('Aposta Excluida')
-            except NaoExiste as n_existe:
-                self.__tela_aposta.msg(n_existe)
+                self.__dao.get_all()[codigo] 
+            except KeyError:
+                try:
+                    jogo = self.__controlador_sistema.controlador_jogo().jogos()[infos['jogo']]
+                    numeros = infos['num']
+                    data = infos['data']
+                    aposta = Aposta(codigo, data, jogo, numeros)
+                    self.__dao.add(codigo, aposta)
+                    self.__tela_aposta.erro('Aposta Adicionada!')
+                except KeyError:
+                    self.__tela_aposta.erro('Jogo nao existe!!')
+                except QuantidadeNumerosIncorreta as qnt_incorreta:
+                    #se qnt de num incorreta mostra o max e min permitido de acordo c o jogo escolhido
+                    self.__tela_aposta.erro(
+                    '''{}
+                    Max: {}  Min: {}'''.format(qnt_incorreta, jogo.max_numeros, jogo.min_numeros))
+                except NumerosIncorretos as num_incorretos:
+                    self.__tela_aposta.erro(num_incorretos)    
+            else:
+                self.__tela_aposta.erro('Aposta Ja Existe!')
+
+    def listagem(self):
+        return self.__tela_aposta.listagem()
+
+    def exclui_aposta(self, infos: dict):
+        #exclui aposta
+        if infos is not None:
+            try:
+                for aposta in infos['apostas']:
+                    self.__dao.remove(aposta.split()[0])
+            except KeyError:
+                self.__tela_aposta.erro('Aposta Nao Existe!')
 
     def lista_aposta(self):
-        # lista os apostas
-        try:
-            #se ha apostas para listar
-            if len(self.__apostas) >= 1:
-                self.__tela_aposta.msg('Apostas')
-                for i in self.apostas():
-                    self.__tela_aposta.lista_apostas(i.codigo ,i.data, i.jogo.nome, i.numeros)
-            else:
-                raise ListaVazia('apostas')
-        except ListaVazia as vazia:
-            self.__tela_aposta.msg(vazia)
+        # lista os aposta
+        self.__tela_aposta.limpar_listagem()
+        if len(self.__dao.get_all()) >= 1:
+            for i in self.apostas().values():
+                self.__tela_aposta.listagem_aposta(i.codigo, i.jogo.nome, i.data, i.numeros)
 
-    # acoes altera aposta
+# acoes altera aposta
 
-    def abre_tela_altera_aposta(self):
+    def abre_tela_altera_aposta(self, info: dict):
         #opcoes de alteracao do apostador
-        switcher = {
-            0 : False ,
-            1 : self.altera_codigo,
-            2 : self.altera_data,
-            3 : self.altera_jogo,
-            4 : self.altera_numeros
-        }
-        op = True
-        while op:
-            opcao = self.__tela_aposta.opcoes_alterar()
-            funcao_escolhida = switcher[opcao]
-            if funcao_escolhida is False:
-                op = False
-            else:
-                funcao_escolhida()
-    
-    def altera_codigo(self):
-        #altera codigo da aposta
-        #pede o codigo da aposta para alterar..
-        aposta = self.encontra_aposta_existente('Codigo da aposta para alterar: ')
-        #se a aposta existe
-        if aposta is not None:
-            #pede o novo codigo
-            codigo = self.encontra_aposta_nao_existente('Novo codigo da aposta: ')
-            if codigo is not None:
-                #realiza a alteracao
-                aposta.codigo = codigo
-                self.__tela_aposta.msg('Codigo alterado')
-           
-    def altera_data(self):
-        #altera data da aposta
-        #pede o codigo da aposta para alterar..
-        aposta = self.encontra_aposta_existente('Codigo da aposta para alterar: ')
-        if aposta is not None:
-            #pede a nova data
-            self.__tela_aposta.msg('Nova data')
-            data = self.__tela_aposta.pega_data()
-            #realiza a alteracao
-            aposta.data = data
-            self.__tela_aposta.msg('Data alterada')
-
-    def altera_jogo(self):
-        #pede o codigo da aposta para alterar..
-        aposta = self.encontra_aposta_existente('Codigo da aposta para alterar: ')
-        if aposta is not None:
-            jogo = self.__controlador_sistema.controlador_jogo().encontra_jogo_existente('Novo jogo: ')
-            if jogo is not None:
-                #realiza a alteracao
-                try:
-                    aposta.jogo = jogo
-                    self.__tela_aposta.msg('Jogo alterado')
-                except QuantidadeNumerosIncorreta as qnt_incorreta:
-                    self.__tela_aposta.msg(qnt_incorreta)
-
-    def altera_numeros(self):
-        #pede o codigo da aposta para alterar..
-        aposta = self.encontra_aposta_existente('Codigo da aposta para alterar: ')
-        if aposta is not None:
+        if info is not None:
             try:
-                numeros = sorted(self.__tela_aposta.le_ints())
-                aposta.numeros = numeros
-                self.__tela_aposta.msg('Numeros alterados')
+                aposta = self.__dao.get(info['aposta'])
+                cod = aposta.codigo
+                jogo = aposta.jogo.nome
+                data = aposta.data
+                num = aposta.numeros
+                
+                infos = self.__tela_aposta.mostra_tela_alterar(cod, jogo, data, num)
+            
+                if infos is not None:
+                    switcher = {
+                        'cod' : self.altera_codigo,
+                        'data' : self.altera_data,
+                        'jogo' : self.altera_jogo,
+                        'num' : self.altera_numeros
+                    }
+                    for i in ['cod', 'jogo', 'data', 'num']:
+                        if i in infos:
+                            switcher[i](aposta, infos[i])       
+            except KeyError:
+                self.__tela_aposta.erro('Aposta nao existe!')
             except QuantidadeNumerosIncorreta as qnt_incorreta:
-                self.__tela_aposta.msg(qnt_incorreta)
+                self.__tela_aposta.erro(qnt_incorreta)
             except NumerosIncorretos as num_incorretos:
-                self.__tela_aposta.msg(num_incorretos)
-
-
-    #acoes apostador
-    def inclui_apostador(self):
-        #inclui apostador
-        aposta = self.encontra_aposta_existente('Codigo da aposta: ')
-        if aposta is not None:
-            apostador = self.__controlador_sistema.controlador_apostador().encontra_apostador_existente('Cpf do apostador: ')
-            if apostador is not None:
-                try:
-                    if apostador not in aposta.apostadores():
-                        #realiza a inclusao
-                        aposta.add_apostador(apostador)
-                        self.__tela_aposta.msg('Apostador Adicionado')
-                    else:
-                        raise JaExiste('apostador')
-                except JaExiste as ja_existe:
-                    self.__tela_aposta.msg(ja_existe)
-                except IdadeInvalida as idade:
-                     self.__tela_aposta.msg(idade)
-
-    def exclui_apostador(self):
-        #exclui apostador
-        aposta = self.encontra_aposta_existente('Codigo da aposta: ')
-        if aposta is not None:
-            apostador = self.__controlador_sistema.controlador_apostador().encontra_apostador_existente('Cpf do apostador: ')
-            if apostador is not None:
-                try:
-                    if apostador in aposta.apostadores():
-                        #realiza a exclusao
-                        aposta.del_apostador(apostador)
-                        self.__tela_aposta.msg('Apostador Excluido')
-                    else:
-                        raise NaoExiste('apostador')
-                except NaoExiste as nao_existe:
-                    self.__tela_aposta.msg(nao_existe)
+                self.__tela_aposta.erro(num_incorretos)
     
-    def lista_apostadores(self):
-        aposta = self.encontra_aposta_existente('Codigo da aposta: ')
-        if aposta is not None:
+    def altera_codigo(self, aposta, cod):
+        try:
+            self.__dao.get(cod)
+            self.__tela_aposta.erro('Aposta ja existe!')
+        except KeyError:
+            self.__dao.remove(aposta.codigo)
+            aposta.codigo = cod
+            self.__dao.add(cod, aposta)
+           
+    def altera_data(self, aposta, data):
+        #altera data da aposta
+        self.__dao.remove(aposta.codigo)
+        aposta.data = data
+        self.__dao.add(aposta.codigo, aposta)
+        
+    def altera_jogo(self, aposta, jogo):
+        try:
+            jogo = self.__controlador_sistema.controlador_jogo().jogos()[jogo]
+            self.__dao.remove(aposta.codigo)
+            aposta.jogo = jogo
+            self.__dao.add(aposta.codigo, aposta)
+        except KeyError:
+            self.__tela_aposta.erro('Jogo nao existe!!')
+
+    def altera_numeros(self, aposta, numeros):
+        #pede o codigo da aposta para alterar..
+        self.__dao.remove(aposta.codigo)
+        aposta.numeros = numeros
+        self.__dao.add(aposta.codigo, aposta)
+
+#acoes apostador
+    def inclui_apostador(self, infos: dict):
+        #inclui apostador
+        if infos is not None:
             try:
-                if len(aposta.apostadores())>=1:
-                    self.__tela_aposta.msg('Apostadores')
+                for aposta in infos['apostas']:
+                    aposta = self.__dao.get(aposta.split()[0])
+                    for apostador in infos['apostadores']:
+                        apostador = self.__controlador_sistema.controlador_apostador().apostadores()[apostador.split()[0]]
+                        #realiza a inclusao
+                        try:
+                            aposta.add_apostador(apostador)
+                        except JaExiste as ja_existe:
+                            self.__tela_aposta.erro(ja_existe)
+                        except IdadeInvalida as idade:
+                            self.__tela_aposta.erro(idade)
+            except KeyError:
+                self.__tela_aposta.erro('Aposta Nao Existe!')
+
+    def exclui_apostador(self, infos: dict):
+        if infos is not None:
+            try:
+                for aposta in infos['apostas']:
+                    aposta = self.__dao.get(aposta.split()[0])
+                    for apostador in infos['apostadores']:
+                        apostador = self.__controlador_sistema.controlador_apostador().apostadores()[apostador.split()[0]]
+                        try:
+                            aposta.del_apostador(apostador)
+                        except NaoExiste as n_existe:
+                            self.__tela_aposta.erro(n_existe)
+            except KeyError:
+                self.__tela_aposta.erro('Aposta Nao Existe!')
+    
+    def lista_apostadores(self, infos: dict):
+        if infos is not None:
+            try:
+                aposta = self.__dao.get(infos['aposta'])
+                self.__tela_aposta.limpar_listagem()
+                #se o apostador existir..
+                if len(aposta.apostadores()) >= 1:
+                    #se ha apostas para listar
                     for i in aposta.apostadores():
-                        self.__tela_aposta.lista_apostadores(i.nome, i.cpf, i.idade, i.endereco().estado, i.endereco().cidade)
+                        self.__tela_aposta.listagem_apostadores(i.nome, i.cpf, i.idade, i.endereco().estado, i.endereco().cidade)
+                    self.__tela_aposta.mostra_tela_apostadores()
                 else:
                     raise ListaVazia('apostadores')
             except ListaVazia as vazia:
-                self.__tela_aposta.msg(vazia)
+                self.__tela_aposta.erro(vazia)
 
