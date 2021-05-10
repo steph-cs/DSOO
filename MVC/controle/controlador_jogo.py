@@ -60,7 +60,6 @@ class ControladorJogo():
                     jogo = Jogo(nome, max_num, min_num, premio)
                     #self.__jogos.append(jogo)
                     self.__dao.add(nome, jogo)
-                    self.__tela_jogo.erro('Jogo Adicionado')
                 except QuantidadeNumerosIncorreta as qnt_incorreta:
                     self.__tela_jogo.erro(qnt_incorreta)
             else:
