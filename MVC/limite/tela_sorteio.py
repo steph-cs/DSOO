@@ -75,7 +75,7 @@ class TelaSorteio(TelaAbstrata):
             if None not in info.values():
                 return info
         except CodigoInvalido as cod:
-            self.erro(erro)
+            self.erro(cod)
         except CampoVazio as vazio:
             self.erro(vazio)
         except ValueError:
