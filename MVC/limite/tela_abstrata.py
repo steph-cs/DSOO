@@ -1,4 +1,3 @@
-
 from datetime import date, timedelta
 import PySimpleGUI as sg
 
