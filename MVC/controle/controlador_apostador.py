@@ -113,18 +113,15 @@ class ControladorApostador:
                 self.__tela_apostador.erro('Apostador nao existe!')
 
     def altera_estado(self, apostador, estado):
-        self.__dao.remove(apostador.cpf)
         apostador.endereco().estado = estado
         self.__dao.add(apostador.cpf, apostador)
 
     def altera_cidade(self, apostador, cidade):
-        self.__dao.remove(apostador.cpf)
         apostador.endereco().cidade = cidade
         self.__dao.add(apostador.cpf, apostador)
 
     def altera_nome(self, apostador, nome):
         #altera nome do apostador
-        self.__dao.remove(apostador.cpf)
         apostador.nome = nome
         self.__dao.add(apostador.cpf, apostador)
     
@@ -139,7 +136,6 @@ class ControladorApostador:
 
     def altera_ano_nascimento(self, apostador, ano_nasc):
         #altera ano de nascimento do apostador
-        self.__dao.remove(apostador.cpf)
         apostador.ano_nascimento = ano_nasc
         self.__dao.add(apostador.cpf, apostador)
 

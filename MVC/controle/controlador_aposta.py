@@ -74,7 +74,6 @@ class ControladorAposta:
                     data = infos['data']
                     aposta = Aposta(codigo, data, jogo, numeros)
                     self.__dao.add(codigo, aposta)
-                    self.__tela_aposta.erro('Aposta Adicionada!')
                 except KeyError:
                     self.__tela_aposta.erro('Jogo nao existe!!')
                 except QuantidadeNumerosIncorreta as qnt_incorreta:
@@ -148,14 +147,12 @@ class ControladorAposta:
            
     def altera_data(self, aposta, data):
         #altera data da aposta
-        self.__dao.remove(aposta.codigo)
         aposta.data = data
         self.__dao.add(aposta.codigo, aposta)
         
     def altera_jogo(self, aposta, jogo):
         try:
             jogo = self.__controlador_sistema.controlador_jogo().jogos()[jogo]
-            self.__dao.remove(aposta.codigo)
             aposta.jogo = jogo
             self.__dao.add(aposta.codigo, aposta)
         except KeyError:
@@ -163,7 +160,6 @@ class ControladorAposta:
 
     def altera_numeros(self, aposta, numeros):
         #pede o codigo da aposta para alterar..
-        self.__dao.remove(aposta.codigo)
         aposta.numeros = numeros
         self.__dao.add(aposta.codigo, aposta)
 
