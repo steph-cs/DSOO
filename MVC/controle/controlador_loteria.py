@@ -221,7 +221,7 @@ class ControladorLoteria():
                 self.__tela_loteria.erro(vazia)
 
     def apostas_ganhas(self, infos: dict):
-        if infos['qnt'] is not None:
+        if infos['qnt'] is not None: 
             self.ultimas_apostas_ganhas(infos)
         else:
             try:

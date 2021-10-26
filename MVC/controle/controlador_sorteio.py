@@ -141,20 +141,17 @@ class ControladorSorteio():
         #pega jogo, data verifica a existencia do sorteio
         data = self.__tela_sorteio.data_sorteio(data)
         if data is not None:
-            self.__dao.remove(sorteio.codigo)
             sorteio.data = data
             self.__dao.add(sorteio.codigo, sorteio)
 
     def altera_jogo(self, sorteio, jogo):
         try:
             jogo = self.__controlador_sistema.controlador_jogo().jogos()[jogo]
-            self.__dao.remove(sorteio.codigo)
             sorteio.jogo = jogo
             self.__dao.add(sorteio.codigo, sorteio)
         except KeyError:
             self.__tela_sorteio.erro('Jogo nao existe!!')
 
     def altera_numeros(self, sorteio, num):
-        self.__dao.remove(sorteio.codigo)
         sorteio.numeros = num
         self.__dao.add(sorteio.codigo, sorteio)

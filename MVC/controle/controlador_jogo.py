@@ -118,16 +118,13 @@ class ControladorJogo():
             self.__dao.add(nome, jogo)
 
     def altera_premio(self, jogo, premio):
-        self.__dao.remove(jogo.nome)
         jogo.premio = premio
         self.__dao.add(jogo.nome, jogo)
 
     def altera_max(self, jogo, max):
-        self.__dao.remove(jogo.nome)
         jogo.max_numeros = max
         self.__dao.add(jogo.nome, jogo)
 
     def altera_min(self, jogo, min):
-        self.__dao.remove(jogo.nome)
         jogo.min_numeros = min
         self.__dao.add(jogo.nome, jogo)
